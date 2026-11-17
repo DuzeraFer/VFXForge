@@ -64,7 +64,7 @@ Observed on the Vefects interface screenshot (v0.3.74):
 
 ## 2.4 Visual tokens
 
-Light is the default theme; a dark theme ships too. The **preview background is independent of the theme**: textures are judged on the background the artist picks.
+Dark is the default theme (the "Bench" direction from the Paper file); a light theme ships too. The **preview background is independent of the theme**: textures are judged on the background the artist picks.
 
 ```
 --color-ink:            #0d0d0c

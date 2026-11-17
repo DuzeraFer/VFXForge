@@ -231,6 +231,35 @@ describe("history", () => {
   })
 })
 
+describe("gesture merging", () => {
+  it("folds edits with the same key into one undo step", () => {
+    const store = createDocumentStore(fire(), NOW)
+    const before = content(store.getState().project)
+    for (const scale of [4, 5, 6]) {
+      store.apply([{ op: "set_params", graphId: G, id: "n2", params: { scale } }], { label: "Scale", mergeKey: "drag-1" })
+    }
+    store.apply([{ op: "set_params", graphId: G, id: "n2", params: { scale: 9 } }], { label: "Scale", mergeKey: "drag-2" })
+    expect(store.getState().history.done).toHaveLength(2)
+    store.undo()
+    expect(store.getState().project.graphs[0].nodes[1].params.scale).toBe(6)
+    store.undo()
+    expect(content(store.getState().project)).toBe(before)
+    store.redo()
+    expect(store.getState().project.graphs[0].nodes[1].params.scale).toBe(6)
+  })
+
+  it("jumps to any point in history", () => {
+    const store = createDocumentStore(fire(), NOW)
+    for (const scale of [4, 5, 6]) store.apply([{ op: "set_params", graphId: G, id: "n2", params: { scale } }], { label: "Scale" })
+    store.jumpTo(1)
+    expect(store.getState().project.graphs[0].nodes[1].params.scale).toBe(4)
+    store.jumpTo(3)
+    expect(store.getState().project.graphs[0].nodes[1].params.scale).toBe(6)
+    store.jumpTo(0)
+    expect(store.getState().project.graphs[0].nodes[1].params.scale).toBe(3)
+  })
+})
+
 describe("store", () => {
   it("notifies subscribers and keeps a stable state reference", () => {
     const store = createDocumentStore(createProject(), NOW)

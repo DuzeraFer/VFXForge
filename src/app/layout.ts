@@ -1,9 +1,9 @@
 /** Panel sizing rules for the shell (docs/02-design-language.md §2.3). */
 
-export const LEFT_PANEL = { initial: 240, min: 180, max: 420 } as const
+export const LEFT_PANEL = { initial: 232, min: 180, max: 420 } as const
 export const RIGHT_COLUMN = { initial: 360, min: 280, max: 640 } as const
 /** Preview height as a fraction of the right column. */
-export const PREVIEW_SPLIT = { initial: 0.52, min: 0.25, max: 0.8 } as const
+export const PREVIEW_SPLIT = { initial: 0.46, min: 0.25, max: 0.8 } as const
 
 export function clamp(value: number, min: number, max: number): number {
   if (Number.isNaN(value)) return min

@@ -1,29 +1,31 @@
-import { useState, type ReactElement } from "react"
+import type { ReactElement } from "react"
 import { Icon, type IconName } from "./Icon"
 
-const TOOLS: { id: string; label: string; icon: IconName }[] = [
-  { id: "select", label: "Select", icon: "select" },
-  { id: "pan", label: "Pan", icon: "pan" },
-  { id: "frame", label: "Frame", icon: "frame" },
-  { id: "comment", label: "Comment", icon: "comment" },
-  { id: "reroute", label: "Reroute", icon: "reroute" },
-  { id: "measure", label: "Measure / Pick color", icon: "measure" }
+export type ToolId = "select" | "pan"
+
+const TOOLS: { id: ToolId | "frame" | "comment" | "reroute" | "measure"; label: string; icon: IconName; later?: string }[] = [
+  { id: "select", label: "Select (V)", icon: "select" },
+  { id: "pan", label: "Pan (H)", icon: "pan" },
+  { id: "frame", label: "Frame", icon: "frame", later: "a later phase" },
+  { id: "comment", label: "Comment", icon: "comment", later: "a later phase" },
+  { id: "reroute", label: "Reroute", icon: "reroute", later: "a later phase" },
+  { id: "measure", label: "Measure / Pick color", icon: "measure", later: "a later phase" }
 ]
 
-export function ToolStrip(): ReactElement {
-  const [active, setActive] = useState("select")
+export function ToolStrip({ tool, onTool }: { tool: ToolId; onTool: (tool: ToolId) => void }): ReactElement {
   return (
     <nav className="toolstrip" aria-label="Tools">
-      {TOOLS.map((tool) => (
+      {TOOLS.map((item) => (
         <button
-          key={tool.id}
+          key={item.id}
           className="tool"
-          aria-pressed={tool.id === active}
-          title={tool.label}
-          aria-label={tool.label}
-          onClick={() => setActive(tool.id)}
+          aria-pressed={item.id === tool}
+          disabled={!!item.later}
+          title={item.later ? `${item.label} (arrives in ${item.later})` : item.label}
+          aria-label={item.label}
+          onClick={() => !item.later && onTool(item.id as ToolId)}
         >
-          <Icon name={tool.icon} />
+          <Icon name={item.icon} />
         </button>
       ))}
     </nav>

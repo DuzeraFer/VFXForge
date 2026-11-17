@@ -6,7 +6,7 @@ The full spec lives in [`docs/`](docs/README.md). Build order and acceptance che
 
 ## Status
 
-**Phase 1 — Document and engine core.** The document model, the GPU graph engine and the first 21 nodes are in. The app opens a `.vfxf` project and plays its Output in Preview. The node canvas and inspector come in Phase 2.
+**Phase 2 — Editor.** The node canvas, library, schema-driven inspector, gradient editor, Preview controls, timeline and history panel are in, in the dark "Bench" design (a light theme is one click away). A graph can be built by hand from an empty project. The agent link (MCP) comes in Phase 3.
 
 ![Cel fire sheet rendered by the engine](docs/progress/phase-1-cel-fire.png)
 

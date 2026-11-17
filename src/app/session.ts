@@ -4,7 +4,19 @@
  */
 
 import { useSyncExternalStore } from "react"
-import { createDocumentStore, parseProject, serializeProject, createProject, type DocumentStore, type Project } from "../doc"
+import {
+  BatchError,
+  createDocumentStore,
+  createGraph,
+  createProject,
+  parseProject,
+  serializeProject,
+  type DocumentStore,
+  type Graph,
+  type Op,
+  type Project,
+  type Transaction
+} from "../doc"
 
 export type SessionState = {
   project: Project
@@ -14,6 +26,12 @@ export type SessionState = {
   canRedo: boolean
   /** Graph shown in the editor and Preview. */
   activeGraphId: string | null
+  activeGraph: Graph | null
+  /** Selected node ids in the active graph. Shared with the agent later (`get_selection`). */
+  selection: readonly string[]
+  /** Node kept in Preview whatever is selected. */
+  pinnedNodeId: string | null
+  history: { done: readonly Transaction[]; undone: readonly Transaction[] }
   /** Short message for the toast; `id` changes for every new message. */
   notice: { id: number; text: string; error?: boolean } | null
 }
@@ -25,12 +43,14 @@ function fileName(path: string): string {
 }
 
 export class Session {
-  readonly store: DocumentStore = createDocumentStore()
+  readonly store: DocumentStore = createDocumentStore({ ...createProject(), graphs: [createGraph("g1", "Graph 1")] })
   private path: string | null = null
   /** The project as last saved or loaded. Dirty = the current project is a different object. */
   private saved: Project = this.store.getState().project
   private autosaved: Project = this.saved
   private activeGraphId: string | null = null
+  private selection: readonly string[] = []
+  private pinnedNodeId: string | null = null
   private notice: SessionState["notice"] = null
   private noticeId = 0
   private state: SessionState
@@ -45,6 +65,10 @@ export class Session {
   private snapshot(): SessionState {
     const { project, history } = this.store.getState()
     const active = project.graphs.find((g) => g.id === this.activeGraphId) ?? project.graphs[0]
+    // Drop selected or pinned nodes that no longer exist (deleted, undone, other graph).
+    const ids = new Set(active?.nodes.map((n) => n.id))
+    if (this.selection.some((id) => !ids.has(id))) this.selection = this.selection.filter((id) => ids.has(id))
+    if (this.pinnedNodeId && !ids.has(this.pinnedNodeId)) this.pinnedNodeId = null
     return {
       project,
       path: this.path,
@@ -52,6 +76,10 @@ export class Session {
       canUndo: history.done.length > 0,
       canRedo: history.undone.length > 0,
       activeGraphId: active?.id ?? null,
+      activeGraph: active ?? null,
+      selection: this.selection,
+      pinnedNodeId: this.pinnedNodeId,
+      history,
       notice: this.notice
     }
   }
@@ -68,22 +96,52 @@ export class Session {
     return () => this.listeners.delete(listener)
   }
 
-  private say(text: string, error = false): void {
+  say(text: string, error = false): void {
     this.notice = { id: ++this.noticeId, text, error }
     this.emit()
   }
 
   setActiveGraph(graphId: string): void {
     this.activeGraphId = graphId
+    this.selection = []
+    this.pinnedNodeId = null
     this.emit()
   }
 
+  select(ids: readonly string[]): void {
+    if (ids.length === this.selection.length && ids.every((id, i) => id === this.selection[i])) return
+    this.selection = [...ids]
+    this.emit()
+  }
+
+  togglePin(nodeId: string): void {
+    this.pinnedNodeId = this.pinnedNodeId === nodeId ? null : nodeId
+    this.emit()
+  }
+
+  /**
+   * Applies a human edit as one transaction. Invalid ops are reported in a
+   * toast and change nothing. Returns the ids created per op, or null on failure.
+   */
+  apply(ops: readonly Op[], label: string, mergeKey?: string): (string | undefined)[] | null {
+    try {
+      return this.store.apply(ops, { label, mergeKey }).created
+    } catch (error) {
+      if (error instanceof BatchError) {
+        this.say(error.message, true)
+        return null
+      }
+      throw error
+    }
+  }
+
   newProject(): void {
-    const project = createProject()
+    const project = { ...createProject(), graphs: [createGraph("g1", "Graph 1")] }
     this.path = null
     this.saved = project
     this.autosaved = project
     this.activeGraphId = null
+    this.selection = []
     this.store.load(project)
     this.emit()
   }
