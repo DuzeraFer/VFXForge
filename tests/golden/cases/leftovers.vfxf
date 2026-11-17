@@ -302,6 +302,120 @@
    ],
    "frames": [],
    "exposed": []
+  },
+  {
+   "id": "g3",
+   "name": "gradient_dynamic",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "ramp",
+     "type": "gradient",
+     "position": [
+      0,
+      0
+     ],
+     "params": {}
+    },
+    {
+     "id": "pal",
+     "type": "image_sequence",
+     "position": [
+      0,
+      160
+     ],
+     "params": {
+      "file": "images/5e90e0ce00000001.png",
+      "cols": 1,
+      "rows": 1,
+      "count": 1,
+      "cell": [
+       64,
+       64
+      ]
+     }
+    },
+    {
+     "id": "gd",
+     "type": "gradient_dynamic",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "position": 0.25
+     }
+    },
+    {
+     "id": "gd2",
+     "type": "gradient_dynamic",
+     "position": [
+      200,
+      160
+     ],
+     "params": {
+      "direction": "vertical",
+      "by_position": true
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "row"
+     }
+    },
+    {
+     "id": "o2",
+     "type": "output",
+     "position": [
+      400,
+      160
+     ],
+     "params": {
+      "name": "vertical_by_position"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "ramp.out",
+     "to": "gd.in"
+    },
+    {
+     "from": "pal.out",
+     "to": "gd.gradient"
+    },
+    {
+     "from": "ramp.out",
+     "to": "gd2.in"
+    },
+    {
+     "from": "pal.out",
+     "to": "gd2.gradient"
+    },
+    {
+     "from": "gd.out",
+     "to": "o.in"
+    },
+    {
+     "from": "gd2.out",
+     "to": "o2.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
   }
  ],
  "functions": [],

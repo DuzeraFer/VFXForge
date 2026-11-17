@@ -136,6 +136,28 @@ ipcMain.handle("project:saveAs", async (event, text: string, suggestedName: stri
   return result.filePath
 })
 
+const PROFILE_FILTERS = [{ name: "VFXForge settings", extensions: ["vfxsettings"] }]
+
+/** A settings profile: preferences and hotkeys as a file, to carry to another computer. */
+ipcMain.handle("profile:save", async (event, text: string): Promise<string | null> => {
+  const win = BrowserWindow.fromWebContents(event.sender)!
+  const preset = process.env.VFXFORGE_TEST_PROFILE_FILE
+  const result = preset ? { canceled: false, filePath: preset } : await dialog.showSaveDialog(win, { defaultPath: "vfxforge.vfxsettings", filters: PROFILE_FILTERS })
+  if (result.canceled || !result.filePath) return null
+  writeFileSync(result.filePath, String(text).slice(0, 100_000), "utf8")
+  return result.filePath
+})
+
+ipcMain.handle("profile:open", async (event): Promise<string | null> => {
+  const win = BrowserWindow.fromWebContents(event.sender)!
+  const preset = process.env.VFXFORGE_TEST_PROFILE_FILE
+  const result = preset ? { canceled: false, filePaths: [preset] } : await dialog.showOpenDialog(win, { properties: ["openFile"], filters: PROFILE_FILTERS })
+  if (result.canceled || result.filePaths.length === 0) return null
+  // The window checks the content; this only keeps a wrong pick from flooding it.
+  if (statSync(result.filePaths[0]).size > 100_000) return null
+  return readFileSync(result.filePaths[0], "utf8")
+})
+
 const FUNCTION_FILTERS = [{ name: "VFXForge function", extensions: ["vfxfn"] }]
 
 ipcMain.handle("function:save", async (event, text: string, suggestedName: string): Promise<string | null> => {

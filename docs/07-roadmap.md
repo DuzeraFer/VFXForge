@@ -134,7 +134,12 @@ Built after Phase 8, as one follow-up (items 3 and 5, and two of the nodes):
 - **Multi Blend** stacks up to six layers with one blend mode and an opacity per layer. **Image Sequence** plays a numbered run of image files: the frames are picked together, packed into one sheet (at most 4096 px on a side, scaled down if needed) and stored with the project's images; playback loops, holds or ping-pongs, or is stretched over the graph's frame count.
 - **Hotkeys** for tools, nodes, view and playback can be changed in Settings. Save, undo, copy and paste follow the system and are fixed. They are kept per computer, not in the project.
 
-Not built yet: the 16 in / 16 out limit is not enforced (there is no limit), example projects beyond the cel fire, wire styles, settings profiles (export and import of hotkeys and preferences), Gradient Dynamic, and picking the frames of an Image Sequence through MCP.
+- **Gradient Dynamic** colors a grayscale input from a gradient that is itself a picture (one row or column of it, or the row at each pixel's own height).
+- **Wire styles**: curved, straight or stepped, under Editor in Settings.
+- **Settings profile**: Export and Import in Settings carry the theme, the wire style and the hotkeys in one `.vfxsettings` file. It never holds the OpenAI key or anything of a project.
+- **Examples** in the Library: Cel fire, Slash swipe, Smoke dissolve, Ring and bolt. Each opens as a new unsaved project, built from the shipped recipes with frames around its stages. They live in `src/library/examples/`.
+
+Not built yet: the 16 in / 16 out limit is not enforced (there is no limit), and picking the frames of an Image Sequence through MCP.
 
 ## Phase 8 — AI v2
 

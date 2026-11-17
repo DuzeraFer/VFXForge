@@ -1,0 +1,565 @@
+{
+ "version": 1,
+ "name": "Smoke dissolve",
+ "seed": 7,
+ "graphs": [
+  {
+   "id": "g1",
+   "name": "smoke_dissolve",
+   "description": "A smoke puff that breaks apart over the loop: the Cel Smoke Puff recipe cut by the Dissolve Mask recipe.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "t",
+     "type": "time",
+     "position": [
+      0,
+      320
+     ]
+    },
+    {
+     "id": "puff",
+     "type": "fn_cel_smoke_puff",
+     "position": [
+      200,
+      0
+     ]
+    },
+    {
+     "id": "solid",
+     "type": "threshold",
+     "position": [
+      200,
+      160
+     ],
+     "name": "Whole puff",
+     "params": {
+      "level": 0.05,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "dissolve",
+     "type": "fn_dissolve_mask",
+     "position": [
+      400,
+      160
+     ],
+     "params": {
+      "cells": 6
+     },
+     "driven": {
+      "amount": "t.phase"
+     }
+    },
+    {
+     "id": "clear",
+     "type": "uniform_color",
+     "position": [
+      400,
+      320
+     ],
+     "name": "Nothing",
+     "params": {
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ]
+     }
+    },
+    {
+     "id": "cut",
+     "type": "blend",
+     "position": [
+      600,
+      0
+     ],
+     "name": "Keep what is left"
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "name": "smoke"
+     }
+    },
+    {
+     "id": "sheet",
+     "type": "sheet_output",
+     "position": [
+      800,
+      160
+     ],
+     "name": "Sheet",
+     "params": {
+      "cols": 4,
+      "name": "smoke_sheet"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "puff.tones",
+     "to": "solid.in"
+    },
+    {
+     "from": "solid.out",
+     "to": "dissolve.shape"
+    },
+    {
+     "from": "puff.color",
+     "to": "cut.fg"
+    },
+    {
+     "from": "clear.out",
+     "to": "cut.bg"
+    },
+    {
+     "from": "dissolve.mask",
+     "to": "cut.mask"
+    },
+    {
+     "from": "cut.out",
+     "to": "out.in"
+    },
+    {
+     "from": "cut.out",
+     "to": "sheet.in"
+    }
+   ],
+   "frames": [
+    {
+     "id": "f1",
+     "title": "Dissolve",
+     "nodeIds": [
+      "solid",
+      "dissolve",
+      "clear",
+      "cut"
+     ],
+     "color": "amber",
+     "note": "amount follows the loop: 0 is whole, 1 is gone."
+    },
+    {
+     "id": "f2",
+     "title": "Results",
+     "nodeIds": [
+      "out",
+      "sheet"
+     ],
+     "color": "green"
+    }
+   ],
+   "exposed": []
+  },
+  {
+   "id": "cel_smoke_puff",
+   "name": "Cel Smoke Puff",
+   "function": true,
+   "description": "A cartoon smoke puff: a lumpy blob in two flat tones with a lit rim.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "t",
+     "type": "time",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "noise",
+     "type": "perlin",
+     "position": [
+      200,
+      0
+     ],
+     "name": "Lump noise",
+     "params": {
+      "scale": 3.5,
+      "octaves": 2
+     },
+     "driven": {
+      "evolution": "t.phase"
+     }
+    },
+    {
+     "id": "blob",
+     "type": "shape",
+     "position": [
+      200,
+      160
+     ],
+     "params": {
+      "size": [
+       0.52,
+       0.52
+      ],
+      "softness": 0.25
+     }
+    },
+    {
+     "id": "warp",
+     "type": "warp",
+     "position": [
+      400,
+      160
+     ],
+     "params": {
+      "intensity": 0.35,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "rim",
+     "type": "rim_shade",
+     "position": [
+      600,
+      160
+     ],
+     "params": {
+      "width": 0.1,
+      "angle": 135,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "palette",
+     "type": "palette_remap",
+     "position": [
+      800,
+      160
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0.3,
+         0.3,
+         0.36,
+         0
+        ]
+       },
+       {
+        "position": 0.25,
+        "color": [
+         0.42,
+         0.42,
+         0.5,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.75,
+        "color": [
+         0.86,
+         0.86,
+         0.9,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      1000,
+      160
+     ],
+     "params": {
+      "name": "color"
+     }
+    },
+    {
+     "id": "out_tones",
+     "type": "output",
+     "position": [
+      1000,
+      320
+     ],
+     "params": {
+      "name": "tones"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "blob.out",
+     "to": "warp.in"
+    },
+    {
+     "from": "noise.out",
+     "to": "warp.map"
+    },
+    {
+     "from": "warp.out",
+     "to": "rim.in"
+    },
+    {
+     "from": "rim.out",
+     "to": "palette.in"
+    },
+    {
+     "from": "palette.out",
+     "to": "out.in"
+    },
+    {
+     "from": "rim.out",
+     "to": "out_tones.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "palette",
+     "param": "gradient",
+     "as": "palette",
+     "label": "Palette"
+    },
+    {
+     "nodeId": "blob",
+     "param": "size",
+     "as": "size",
+     "label": "Size"
+    },
+    {
+     "nodeId": "warp",
+     "param": "intensity",
+     "as": "lumps",
+     "label": "Lumps"
+    },
+    {
+     "nodeId": "noise",
+     "param": "scale",
+     "as": "lump_size",
+     "label": "Lump scale"
+    },
+    {
+     "nodeId": "rim",
+     "param": "angle",
+     "as": "light",
+     "label": "Light from"
+    },
+    {
+     "nodeId": "rim",
+     "param": "width",
+     "as": "rim",
+     "label": "Rim width"
+    }
+   ]
+  },
+  {
+   "id": "dissolve_mask",
+   "name": "Dissolve Mask",
+   "function": true,
+   "description": "Eats any shape away with a cell and cloud pattern. Outputs the eaten shape and the pattern itself, for dissolving in a shader. Without a shape it uses the whole image.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "shape",
+     "type": "graph_input",
+     "position": [
+      0,
+      160
+     ],
+     "params": {
+      "name": "shape",
+      "fill": [
+       1,
+       1,
+       1,
+       1
+      ]
+     }
+    },
+    {
+     "id": "cells",
+     "type": "voronoi",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "scale": 7
+     }
+    },
+    {
+     "id": "clouds",
+     "type": "perlin",
+     "position": [
+      0,
+      320
+     ],
+     "params": {
+      "scale": 3,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "mix",
+     "type": "warp",
+     "position": [
+      200,
+      0
+     ],
+     "name": "Clouds bend the cells",
+     "params": {
+      "intensity": 0.25
+     }
+    },
+    {
+     "id": "erode",
+     "type": "erosion",
+     "position": [
+      400,
+      160
+     ],
+     "params": {
+      "amount": 0.8
+     }
+    },
+    {
+     "id": "cut",
+     "type": "band",
+     "position": [
+      600,
+      160
+     ],
+     "name": "Hard edge",
+     "params": {
+      "thresholds": [
+       0.5
+      ]
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      800,
+      160
+     ],
+     "params": {
+      "name": "mask"
+     }
+    },
+    {
+     "id": "out_map",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "map"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "cells.out",
+     "to": "mix.in"
+    },
+    {
+     "from": "clouds.out",
+     "to": "mix.map"
+    },
+    {
+     "from": "shape.out",
+     "to": "erode.in"
+    },
+    {
+     "from": "mix.out",
+     "to": "erode.map"
+    },
+    {
+     "from": "erode.out",
+     "to": "cut.in"
+    },
+    {
+     "from": "cut.out",
+     "to": "out.in"
+    },
+    {
+     "from": "mix.out",
+     "to": "out_map.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "erode",
+     "param": "amount",
+     "as": "amount",
+     "label": "Amount"
+    },
+    {
+     "nodeId": "cells",
+     "param": "scale",
+     "as": "cells",
+     "label": "Cell scale"
+    },
+    {
+     "nodeId": "clouds",
+     "param": "scale",
+     "as": "clouds",
+     "label": "Cloud scale"
+    },
+    {
+     "nodeId": "mix",
+     "param": "intensity",
+     "as": "bend",
+     "label": "Bend"
+    },
+    {
+     "nodeId": "cells",
+     "param": "seed",
+     "as": "seed",
+     "label": "Seed"
+    },
+    {
+     "nodeId": "cut",
+     "param": "softness",
+     "as": "softness",
+     "label": "Soft edge"
+    }
+   ]
+  }
+ ],
+ "functions": [],
+ "gradients": [],
+ "references": [],
+ "comments": []
+}

@@ -179,7 +179,7 @@ export function App(): ReactElement {
             </div>
             <ToolStrip tool={tool} onTool={setTool} />
             {activeGraph && resolved ? (
-              <GraphCanvas graph={activeGraph} resolved={resolved} selection={doc.selection} pinnedNodeId={doc.pinnedNodeId} tool={tool} agent={doc.agent} comments={doc.project.comments} />
+              <GraphCanvas key={doc.loaded} graph={activeGraph} resolved={resolved} selection={doc.selection} pinnedNodeId={doc.pinnedNodeId} tool={tool} agent={doc.agent} comments={doc.project.comments} />
             ) : (
               <div className="graph-canvas" />
             )}

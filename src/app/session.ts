@@ -23,6 +23,8 @@ import {
 export type SessionState = {
   project: Project
   path: string | null
+  /** Counts the projects opened in this window. A new number means a different project, even under the same graph ids. */
+  loaded: number
   dirty: boolean
   canUndo: boolean
   canRedo: boolean
@@ -104,6 +106,7 @@ export class Session {
     return {
       project,
       path: this.path,
+      loaded: this.loaded,
       dirty: project !== this.saved,
       canUndo: history.done.length > 0,
       canRedo: history.undone.length > 0,
@@ -253,9 +256,12 @@ export class Session {
     return null
   }
 
+  private loaded = 0
+
   newProject(): void {
     const project = { ...createProject(), graphs: [createGraph("g1", "Graph 1")] }
     this.path = null
+    this.loaded++
     this.saved = project
     this.autosaved = project
     this.activeGraphId = null
@@ -269,6 +275,7 @@ export class Session {
   loadText(text: string, path: string | null, recovered?: string): void {
     const project = parseProject(text)
     this.path = path
+    this.loaded++
     this.saved = project
     this.autosaved = project
     this.activeGraphId = null
@@ -285,6 +292,16 @@ export class Session {
       }
     }
     this.emit()
+  }
+
+  /** Starts a new, unsaved project from a shipped example. Refuses while there are unsaved changes. */
+  openExample(text: string): boolean {
+    if (this.getState().dirty) {
+      this.say("Save your changes first (or undo them), then open the example.", true)
+      return false
+    }
+    this.loadText(text, null)
+    return true
   }
 
   /** Opens the project the app was started with, if any. */

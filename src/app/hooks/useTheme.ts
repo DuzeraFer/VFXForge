@@ -26,6 +26,16 @@ export function useTheme(): { theme: ThemeName; toggleTheme: () => void } {
     }
   }, [theme])
 
+  // An imported settings profile brings its theme along.
+  useEffect(() => {
+    const onTheme = (event: Event): void => {
+      const next = (event as CustomEvent<unknown>).detail
+      if (next === "light" || next === "dark") setTheme(next)
+    }
+    window.addEventListener("vfxforge:theme", onTheme)
+    return () => window.removeEventListener("vfxforge:theme", onTheme)
+  }, [])
+
   const toggleTheme = useCallback(() => setTheme((t) => (t === "light" ? "dark" : "light")), [])
   return { theme, toggleTheme }
 }

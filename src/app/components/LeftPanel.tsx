@@ -4,6 +4,7 @@ import { addReferenceFromFile, deleteReference, setReferenceNote, useAssetUrl } 
 import { searchNodes, usable } from "../../canvas/NodeSearch"
 import type { Graph, Transaction } from "../../doc"
 import { registry } from "../../nodes"
+import { examples } from "../../library/examples"
 import { recipes } from "../../library/recipes"
 import { addGraph, addNodeAtCenter, prettyName } from "../commands"
 import { addRecipe, importFunctionFromFile } from "../functions"
@@ -113,6 +114,36 @@ function Library(): ReactElement {
                     <button className="row row-button row-node row-recipe" title={`${r.description} Adding it copies the function into this project, where you can open and change it.`} onClick={() => addRecipe(r.id)} data-recipe={r.id}>
                       <span className="socket-dot" data-type="color" />
                       <span className="row-title">{r.name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        )}
+        {!searching && (
+          <li>
+            <button
+              className="row row-button row-category"
+              aria-expanded={opened.has("Examples")}
+              data-testid="examples"
+              onClick={() =>
+                setOpened((current) => {
+                  const next = new Set(current)
+                  if (!next.delete("Examples")) next.add("Examples")
+                  return next
+                })
+              }
+            >
+              <span className="row-title">Examples</span>
+              <span className="row-meta">{examples.length}</span>
+            </button>
+            {opened.has("Examples") && (
+              <ul className="row-list">
+                {examples.map((example) => (
+                  <li key={example.id}>
+                    <button className="row row-button row-node row-recipe" title={`${example.description} Opens as a new project of your own.`.trim()} onClick={() => session.openExample(example.text)} data-example={example.id}>
+                      <span className="row-title">{example.name}</span>
                     </button>
                   </li>
                 ))}

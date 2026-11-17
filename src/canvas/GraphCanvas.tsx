@@ -30,6 +30,7 @@ import {
 } from "../app/commands"
 import { session, type AgentState } from "../app/session"
 import { actionFor } from "../app/hotkeys"
+import { usePreferences, type WireStyle } from "../app/preferences"
 import { Frames } from "./Frames"
 import { parseSocketRef, type CommentThread, type Graph, type Op } from "../doc"
 import { isDrivable, type DataType } from "../engine/nodeDef"
@@ -82,7 +83,9 @@ function buildNodes(graph: Graph, resolved: ResolvedGraph, selection: readonly s
   })
 }
 
-function buildEdges(graph: Graph, resolved: ResolvedGraph): Edge[] {
+const EDGE_TYPE = { curved: "default", straight: "straight", stepped: "smoothstep" } as const
+
+function buildEdges(graph: Graph, resolved: ResolvedGraph, wireStyle: WireStyle): Edge[] {
   const edges: Edge[] = []
   const edge = (id: string, fromRef: string, target: string, targetHandle: string): void => {
     const from = parseSocketRef(fromRef)
@@ -93,6 +96,7 @@ function buildEdges(graph: Graph, resolved: ResolvedGraph): Edge[] {
       sourceHandle: from.socket,
       target,
       targetHandle,
+      type: EDGE_TYPE[wireStyle],
       className: `wire wire-${resolved.outputTypes.get(fromRef) ?? "color"}`
     })
   }
@@ -118,7 +122,8 @@ function Canvas({ graph, resolved, selection, pinnedNodeId, tool, agent, comment
   const pendingWire = useRef<PendingWire | null>(null)
   const [nodes, setNodes] = useState<CardNode[]>([])
   const [search, setSearch] = useState<SearchState | null>(null)
-  const edges = useMemo(() => buildEdges(graph, resolved), [graph, resolved])
+  const { wireStyle } = usePreferences()
+  const edges = useMemo(() => buildEdges(graph, resolved, wireStyle), [graph, resolved, wireStyle])
   // The latest agent edit to this graph that still stands, offered with Show and Undo while the agent works.
   const lastEdit = agent.working.length > 0 ? [...agent.log].reverse().find((e) => e.transactionId !== undefined && e.graphId === graph.id && !e.reverted && (e.nodeIds?.length ?? 0) > 0) : undefined
 
