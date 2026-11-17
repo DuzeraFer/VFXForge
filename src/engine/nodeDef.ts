@@ -5,7 +5,7 @@
  * validation and the engine all read this one schema.
  */
 
-import type { GradientStop, ParamValue } from "../doc/types"
+import type { GradientStop, Graph, ParamValue } from "../doc/types"
 
 /** What flows through a wire. */
 export type DataType = "gray" | "color" | "value"
@@ -13,8 +13,11 @@ export type DataType = "gray" | "color" | "value"
 /** `image` accepts gray or color. */
 export type InputType = DataType | "image"
 
-/** `same:<input>` takes the type of what is connected to that input (color if nothing is). */
-export type OutputType = DataType | `same:${string}`
+/**
+ * `same:<input>` takes the type of what is connected to that input (color if nothing is).
+ * `param:<name>` takes it from an enum parameter whose options are "gray" and "color".
+ */
+export type OutputType = DataType | `same:${string}` | `param:${string}`
 
 export type InputDef = { type: InputType; optional?: boolean; doc?: string }
 
@@ -124,7 +127,22 @@ export type NodeDef = {
   assemble?: (ctx: AssembleContext) => SheetPlan
 }
 
-export type ResolvedNodeDef = Omit<NodeDef, "inputs"> & { inputs: Record<string, InputDef> }
+/** How a function's node maps onto the graph it stands for. */
+export type FunctionBinding = {
+  graph: Graph
+  /** Input name -> id of the Graph Input node inside. */
+  inputs: Record<string, string>
+  /** Output name -> id of the Output node inside. */
+  outputs: Record<string, string>
+  /** Parameter name -> the node and parameter inside that it sets. */
+  params: Record<string, { nodeId: string; param: string }>
+}
+
+export type ResolvedNodeDef = Omit<NodeDef, "inputs"> & {
+  inputs: Record<string, InputDef>
+  /** Set on node types made from a function graph. Such a node has no shader of its own: the engine puts the function's nodes in its place. */
+  fn?: FunctionBinding
+}
 
 /** Where a node's own code goes inside its shader. */
 export const CODE_MARKER = "/*CODE*/"
@@ -132,6 +150,9 @@ export const CODE_MARKER = "/*CODE*/"
 const NAME = /^[a-z][a-z0-9_]*$/
 /** Names the engine generates around a node body. */
 const RESERVED_PARAMS = new Set(["tiling"])
+
+/** Parameter names that would not compile as members of the shader's Params struct. */
+const WGSL_WORDS = new Set(["type", "from", "of", "set", "self", "target", "use", "filter", "sample", "active", "common", "smooth", "ref", "new", "move", "match", "final", "get", "with", "where", "loop", "var", "let", "fn", "if", "else", "for", "while", "return", "switch", "case", "default", "struct", "const", "true", "false", "break", "continue", "discard", "enable", "alias", "override", "do", "enum", "export", "import", "static", "super", "this", "using", "public", "private", "module", "macro", "layout", "inline", "handle", "mat", "premerge", "regardless", "unless", "precise", "meta", "cast", "std", "wgsl"])
 
 export const TILING_MODES = ["tile", "clamp", "mirror"] as const
 export type TilingMode = (typeof TILING_MODES)[number]
@@ -156,6 +177,12 @@ export function defineNode(def: NodeDef): ResolvedNodeDef {
       const source = inputs[type.slice(5)]
       if (!source || source.type === "value") throw new Error(`${where}: output "${name}" refers to a missing image input.`)
     }
+    if (type.startsWith("param:")) {
+      const schema = def.params[type.slice(6)]
+      if (!schema || schema.type !== "enum" || schema.options.some((o) => o !== "gray" && o !== "color")) {
+        throw new Error(`${where}: output "${name}" refers to a parameter that is not a gray/color choice.`)
+      }
+    }
     if (def.evaluate && type !== "value") throw new Error(`${where}: evaluate nodes can only output values.`)
     if (!def.evaluate && type === "value") throw new Error(`${where}: only evaluate nodes can output values.`)
   }
@@ -164,6 +191,7 @@ export function defineNode(def: NodeDef): ResolvedNodeDef {
   for (const [name, schema] of Object.entries(def.params)) {
     if (!NAME.test(name)) throw new Error(`${where}: parameter "${name}" must be snake_case.`)
     if (name in inputs) throw new Error(`${where}: "${name}" is both an input and a parameter.`)
+    if (def.wgsl && WGSL_WORDS.has(name)) throw new Error(`${where}: "${name}" is a word of the shader language and cannot be a parameter name.`)
     if (RESERVED_PARAMS.has(name) || (name === "seed" && def.seeded)) {
       throw new Error(`${where}: parameter "${name}" is added by the engine.`)
     }
@@ -263,6 +291,8 @@ export function isDrivable(schema: ParamSchema): boolean {
 export type NodeRegistry = {
   get: (type: string) => ResolvedNodeDef | undefined
   list: () => ResolvedNodeDef[]
+  /** Changes whenever the set of node types changes (functions of the open project). Absent on a fixed registry. */
+  revision?: () => number
 }
 
 export function createRegistry(defs: readonly ResolvedNodeDef[]): NodeRegistry {

@@ -72,11 +72,16 @@ function graphBlock(graph: Graph, indent: string): string {
     "{",
     `${inner}"id": ${JSON.stringify(graph.id)},`,
     `${inner}"name": ${JSON.stringify(graph.name)},`,
+    ...(graph.function ? [`${inner}"function": true,`] : []),
+    ...(graph.description ? [`${inner}"description": ${JSON.stringify(graph.description)},`] : []),
     `${inner}"settings": ${JSON.stringify(settings)},`,
     `${inner}"nodes": ${lines(graph.nodes.map(nodeLine), inner)},`,
     `${inner}"links": ${lines(graph.links.map(linkLine), inner)},`,
     `${inner}"frames": ${lines(graph.frames.map((f) => JSON.stringify(f)), inner)},`,
-    `${inner}"exposed": ${lines(graph.exposed.map((e) => JSON.stringify(e)), inner)}`,
+    `${inner}"exposed": ${lines(graph.exposed.map((e) => JSON.stringify(e)), inner)}${graph.presets && graph.presets.length > 0 ? "," : ""}`,
+    ...(graph.presets && graph.presets.length > 0
+      ? [`${inner}"presets": ${lines(graph.presets.map((p) => JSON.stringify({ name: p.name, values: sortKeys(p.values) })), inner)}`]
+      : []),
     `${indent}}`
   ].join("\n")
 }
@@ -196,6 +201,19 @@ function parseGraph(raw: unknown, path: string): Graph {
     frames: arr(raw.frames, `${path}.frames`) as Graph["frames"],
     exposed: arr(raw.exposed, `${path}.exposed`) as Graph["exposed"]
   }
+  if (raw.function === true) graph.function = true
+  if (typeof raw.description === "string" && raw.description) graph.description = raw.description
+  for (const [i, e] of graph.exposed.entries()) {
+    const at = `${path}.exposed[${i}]`
+    if (!isRecord(e) || typeof e.nodeId !== "string" || typeof e.param !== "string" || typeof e.as !== "string") fail(at, "expected { nodeId, param, as }")
+    if (!ids.has(e.nodeId)) fail(at, `unknown node "${e.nodeId}"`)
+  }
+  const presets = arr(raw.presets, `${path}.presets`).map((p, i) => {
+    const at = `${path}.presets[${i}]`
+    if (!isRecord(p) || !isRecord(p.values)) fail(at, "expected { name, values }")
+    return { name: str(p.name, `${at}.name`), values: { ...(p.values as Record<string, ParamValue>) } }
+  })
+  if (presets.length > 0) graph.presets = presets
   if (hasCycle(graph)) fail(`${path}.links`, "the links form a loop")
   return graph
 }

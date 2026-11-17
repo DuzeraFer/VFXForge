@@ -1,0 +1,194 @@
+{
+ "version": 1,
+ "name": "Lightning Bolt",
+ "seed": 7,
+ "graphs": [
+  {
+   "id": "cel_lightning",
+   "name": "Lightning Bolt",
+   "function": true,
+   "description": "A lightning bolt with branches, a hot core and a colored glow. Change Evolution per frame for a new bolt.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "bolt",
+     "type": "lightning",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "width": 0.035,
+      "branches": 4,
+      "softness": 0.2
+     }
+    },
+    {
+     "id": "glow",
+     "type": "glow",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "radius": 0.07,
+      "intensity": 1.2,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "palette",
+     "type": "palette_remap",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0.2,
+         0.3,
+         1,
+         0
+        ]
+       },
+       {
+        "position": 0.35,
+        "color": [
+         0.3,
+         0.5,
+         1,
+         0.7
+        ]
+       },
+       {
+        "position": 0.8,
+        "color": [
+         0.75,
+         0.9,
+         1,
+         1
+        ]
+       },
+       {
+        "position": 1,
+        "color": [
+         1,
+         1,
+         1,
+         1
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "color"
+     }
+    },
+    {
+     "id": "out_mask",
+     "type": "output",
+     "position": [
+      600,
+      160
+     ],
+     "params": {
+      "name": "mask"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "bolt.out",
+     "to": "glow.in"
+    },
+    {
+     "from": "glow.out",
+     "to": "palette.in"
+    },
+    {
+     "from": "palette.out",
+     "to": "out.in"
+    },
+    {
+     "from": "bolt.out",
+     "to": "out_mask.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "palette",
+     "param": "gradient",
+     "as": "palette",
+     "label": "Palette"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "start",
+     "as": "start",
+     "label": "Start"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "end",
+     "as": "end",
+     "label": "End"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "jagged",
+     "as": "jagged",
+     "label": "Jagged"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "width",
+     "as": "width",
+     "label": "Width"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "branches",
+     "as": "branches",
+     "label": "Branches"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "evolution",
+     "as": "evolution",
+     "label": "Evolution"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "seed",
+     "as": "seed",
+     "label": "Seed"
+    },
+    {
+     "nodeId": "glow",
+     "param": "radius",
+     "as": "glow",
+     "label": "Glow size"
+    }
+   ]
+  }
+ ]
+}

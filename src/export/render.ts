@@ -68,6 +68,8 @@ function packingOf(graph: Graph, node: Node): Sidecar["packing"] {
 export function exportTargets(project: Project, registry: NodeRegistry): ExportTarget[] {
   const targets: ExportTarget[] = []
   for (const graph of project.graphs) {
+    // A function is a building block; its outputs are sockets, not files.
+    if (graph.function) continue
     for (const node of graph.nodes) {
       const def = registry.get(node.type)
       if (!def || !isResultNode(node.type)) continue

@@ -42,8 +42,11 @@ function nodeLine(graph: Graph, node: Node, registry: NodeRegistry, full: boolea
 export function graphText(graph: Graph, registry: NodeRegistry, projectSeed: number, detail: "compact" | "full" = "compact"): string {
   const s = graph.settings
   const header = `graph ${graph.id} "${graph.name}"  ${s.width}x${s.height}  frames=${s.frames} fps=${s.fps}${s.loop ? " loop" : ""}  seed=${projectSeed}`
-  if (graph.nodes.length === 0) return `${header}\n(empty)`
+  const head = [graph.function ? `${header}  function${graph.description ? `: ${graph.description}` : ""}` : header]
+  if (graph.exposed.length > 0) head.push(`exposed: ${graph.exposed.map((e) => (e.as === e.param ? `${e.nodeId}.${e.param}` : `${e.as}=${e.nodeId}.${e.param}`)).join(", ")}`)
+  if (graph.presets && graph.presets.length > 0) head.push(`presets: ${graph.presets.map((p) => p.name).join(", ")}`)
+  if (graph.nodes.length === 0) return `${head.join("\n")}\n(empty)`
   const idWidth = Math.max(...graph.nodes.map((n) => n.id.length))
   const typeWidth = Math.max(...graph.nodes.map((n) => n.type.length))
-  return [header, ...graph.nodes.map((node) => nodeLine(graph, node, registry, detail === "full", idWidth, typeWidth))].join("\n")
+  return [...head, ...graph.nodes.map((node) => nodeLine(graph, node, registry, detail === "full", idWidth, typeWidth))].join("\n")
 }

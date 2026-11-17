@@ -1,0 +1,252 @@
+{
+ "version": 1,
+ "name": "Magic Ring",
+ "seed": 7,
+ "graphs": [
+  {
+   "id": "magic_ring",
+   "name": "Magic Ring",
+   "function": true,
+   "description": "A magic circle: a ring eaten by noise that runs around it, in two tones with a glow.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "t",
+     "type": "time",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "noise",
+     "type": "perlin",
+     "position": [
+      200,
+      0
+     ],
+     "name": "Noise",
+     "params": {
+      "scale": 6,
+      "octaves": 2
+     },
+     "driven": {
+      "evolution": "t.phase"
+     }
+    },
+    {
+     "id": "around",
+     "type": "polar",
+     "position": [
+      400,
+      0
+     ],
+     "name": "Wrap around",
+     "params": {
+      "mode": "to_polar",
+      "turns": 2
+     }
+    },
+    {
+     "id": "circle",
+     "type": "shape",
+     "position": [
+      400,
+      160
+     ],
+     "params": {
+      "shape": "ring",
+      "size": [
+       0.7,
+       0.7
+      ],
+      "thickness": 0.16,
+      "softness": 0.6
+     }
+    },
+    {
+     "id": "erode",
+     "type": "erosion",
+     "position": [
+      600,
+      160
+     ],
+     "params": {
+      "amount": 0.65,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "band",
+     "type": "band",
+     "position": [
+      800,
+      160
+     ],
+     "params": {
+      "thresholds": [
+       0.1,
+       0.3
+      ]
+     }
+    },
+    {
+     "id": "palette",
+     "type": "palette_remap",
+     "position": [
+      1000,
+      160
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0.45,
+         0.1,
+         0.9,
+         0
+        ]
+       },
+       {
+        "position": 0.33,
+        "color": [
+         0.62,
+         0.3,
+         1,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.75,
+        "color": [
+         0.95,
+         0.85,
+         1,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "glow",
+     "type": "glow",
+     "position": [
+      1200,
+      160
+     ],
+     "params": {
+      "radius": 0.06,
+      "intensity": 0.3,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      1400,
+      160
+     ],
+     "params": {
+      "name": "color"
+     }
+    },
+    {
+     "id": "out_tones",
+     "type": "output",
+     "position": [
+      1400,
+      320
+     ],
+     "params": {
+      "name": "tones"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "noise.out",
+     "to": "around.in"
+    },
+    {
+     "from": "circle.out",
+     "to": "erode.in"
+    },
+    {
+     "from": "around.out",
+     "to": "erode.map"
+    },
+    {
+     "from": "erode.out",
+     "to": "band.in"
+    },
+    {
+     "from": "band.out",
+     "to": "palette.in"
+    },
+    {
+     "from": "palette.out",
+     "to": "glow.in"
+    },
+    {
+     "from": "glow.out",
+     "to": "out.in"
+    },
+    {
+     "from": "band.out",
+     "to": "out_tones.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "palette",
+     "param": "gradient",
+     "as": "palette",
+     "label": "Palette"
+    },
+    {
+     "nodeId": "circle",
+     "param": "size",
+     "as": "size",
+     "label": "Size"
+    },
+    {
+     "nodeId": "circle",
+     "param": "thickness",
+     "as": "thickness",
+     "label": "Thickness"
+    },
+    {
+     "nodeId": "erode",
+     "param": "amount",
+     "as": "break_up",
+     "label": "Break up"
+    },
+    {
+     "nodeId": "noise",
+     "param": "scale",
+     "as": "detail",
+     "label": "Noise scale"
+    },
+    {
+     "nodeId": "glow",
+     "param": "intensity",
+     "as": "glow",
+     "label": "Glow"
+    }
+   ]
+  }
+ ]
+}

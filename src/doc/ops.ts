@@ -9,10 +9,12 @@
 import {
   createGraph,
   parseSocketRef,
+  type ExposedParam,
   type Graph,
   type GraphSettings,
   type Node,
   type ParamValue,
+  type Preset,
   type Project
 } from "./types"
 
@@ -22,11 +24,18 @@ type NodeGuard = {
 }
 
 export type Op =
-  | { op: "add_graph"; id?: string; name: string; settings?: Partial<GraphSettings> }
+  | { op: "add_graph"; id?: string; name: string; settings?: Partial<GraphSettings>; function?: boolean; description?: string }
   | { op: "remove_graph"; graphId: string }
   | { op: "restore_graph"; graph: Graph; index: number }
   | { op: "set_project"; name?: string; seed?: number }
-  | { op: "set_graph"; graphId: string; name?: string; settings?: Partial<GraphSettings> }
+  /** `description: null` removes it. */
+  | { op: "set_graph"; graphId: string; name?: string; settings?: Partial<GraphSettings>; function?: boolean; description?: string | null }
+  /** Shows a node's parameter at graph level, under the name `as` (default: the parameter's name). On a function it becomes a parameter of the function's node. */
+  | { op: "expose_param"; graphId: string; id: string; param: string; as?: string; label?: string; group?: string }
+  | { op: "unexpose_param"; graphId: string; as: string }
+  | { op: "set_exposed"; graphId: string; exposed: ExposedParam[] }
+  /** Replaces the graph's presets. */
+  | { op: "set_presets"; graphId: string; presets: Preset[] }
   | {
       op: "add_node"
       graphId: string
@@ -139,6 +148,8 @@ export function nextId(existing: Iterable<string>, prefix: string): string {
   return `${prefix}${max + 1}`
 }
 
+const EXPOSED_NAME = /^[a-z][a-z0-9_]*$/
+
 function checkId(id: string): void {
   if (!ID_PATTERN.test(id)) {
     throw new OpError("invalid_id", `"${id}" is not a valid id. Use letters, digits, "_" or "-", starting with a letter.`)
@@ -228,6 +239,8 @@ export function applyOp(project: Project, op: Op, options: ApplyOptions = {}): O
       if (project.graphs.some((g) => g.id === id)) throw new OpError("duplicate_id", `Graph id "${id}" is already in use.`)
       if (op.settings) checkSettings(op.settings)
       const graph = createGraph(id, op.name, op.settings)
+      if (op.function) graph.function = true
+      if (op.description) graph.description = op.description
       return {
         project: { ...project, graphs: [...project.graphs, graph] },
         inverse: [{ op: "remove_graph", graphId: id }],
@@ -277,6 +290,18 @@ export function applyOp(project: Project, op: Op, options: ApplyOptions = {}): O
         inverse.name = graph.name
         next = { ...next, name: op.name }
       }
+      if (op.function !== undefined) {
+        inverse.function = graph.function ?? false
+        next = { ...next }
+        if (op.function) next.function = true
+        else delete next.function
+      }
+      if (op.description !== undefined) {
+        inverse.description = graph.description ?? null
+        next = { ...next }
+        if (op.description) next.description = op.description
+        else delete next.description
+      }
       if (op.settings) {
         checkSettings(op.settings)
         const previous: Partial<GraphSettings> = {}
@@ -287,6 +312,68 @@ export function applyOp(project: Project, op: Op, options: ApplyOptions = {}): O
         next = { ...next, settings: { ...graph.settings, ...op.settings } }
       }
       return { project: withGraph(project, index, next), inverse: [inverse] }
+    }
+
+    case "expose_param": {
+      const { graph, index } = findGraph(project, op.graphId)
+      if (!graph.nodes.some((n) => n.id === op.id)) throw new OpError("unknown_node", `Graph "${graph.id}" has no node "${op.id}".`)
+      if (!op.param) throw new OpError("invalid_value", "expose_param needs the name of a parameter.")
+      const as = op.as ?? op.param
+      if (!EXPOSED_NAME.test(as)) throw new OpError("invalid_value", `"${as}" is not a valid name for an exposed parameter. Use lower case letters, digits and "_", starting with a letter.`)
+      if (graph.exposed.some((e) => e.as === as)) throw new OpError("duplicate_id", `This graph already exposes a parameter as "${as}". Pick another name with "as".`)
+      if (graph.exposed.some((e) => e.nodeId === op.id && e.param === op.param)) throw new OpError("duplicate_id", `Parameter "${op.param}" of "${op.id}" is already exposed.`)
+      const entry: ExposedParam = { nodeId: op.id, param: op.param, as }
+      if (op.label) entry.label = op.label
+      if (op.group) entry.group = op.group
+      return {
+        project: withGraph(project, index, { ...graph, exposed: [...graph.exposed, entry] }),
+        inverse: [{ op: "set_exposed", graphId: graph.id, exposed: graph.exposed }]
+      }
+    }
+
+    case "unexpose_param": {
+      const { graph, index } = findGraph(project, op.graphId)
+      if (!graph.exposed.some((e) => e.as === op.as)) throw new OpError("invalid_value", `This graph exposes nothing as "${op.as}".`)
+      return {
+        project: withGraph(project, index, { ...graph, exposed: graph.exposed.filter((e) => e.as !== op.as) }),
+        inverse: [{ op: "set_exposed", graphId: graph.id, exposed: graph.exposed }]
+      }
+    }
+
+    case "set_exposed": {
+      const { graph, index } = findGraph(project, op.graphId)
+      const seen = new Set<string>()
+      for (const e of op.exposed) {
+        if (!e || typeof e.nodeId !== "string" || typeof e.param !== "string" || typeof e.as !== "string" || !EXPOSED_NAME.test(e.as)) {
+          throw new OpError("invalid_value", "Every exposed parameter needs nodeId, param and a valid name in as.")
+        }
+        if (!graph.nodes.some((n) => n.id === e.nodeId)) throw new OpError("unknown_node", `Graph "${graph.id}" has no node "${e.nodeId}".`)
+        if (seen.has(e.as)) throw new OpError("duplicate_id", `Two parameters are exposed as "${e.as}".`)
+        seen.add(e.as)
+      }
+      return {
+        project: withGraph(project, index, { ...graph, exposed: op.exposed.map((e) => ({ ...e })) }),
+        inverse: [{ op: "set_exposed", graphId: graph.id, exposed: graph.exposed }]
+      }
+    }
+
+    case "set_presets": {
+      const { graph, index } = findGraph(project, op.graphId)
+      const names = new Set<string>()
+      for (const preset of op.presets) {
+        if (!preset || typeof preset.name !== "string" || preset.name.trim() === "" || typeof preset.values !== "object" || preset.values === null || Array.isArray(preset.values)) {
+          throw new OpError("invalid_value", "Every preset needs a name and values.")
+        }
+        if (names.has(preset.name)) throw new OpError("duplicate_id", `Two presets are called "${preset.name}".`)
+        names.add(preset.name)
+      }
+      const next = { ...graph }
+      if (op.presets.length > 0) next.presets = op.presets.map((p) => ({ name: p.name, values: { ...p.values } }))
+      else delete next.presets
+      return {
+        project: withGraph(project, index, next),
+        inverse: [{ op: "set_presets", graphId: graph.id, presets: graph.presets ?? [] }]
+      }
     }
 
     case "add_node": {

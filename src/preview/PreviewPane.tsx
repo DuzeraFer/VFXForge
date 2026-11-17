@@ -145,6 +145,8 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
   // Image files load in the background; redraw when one arrives.
   const [assetRevision, setAssetRevision] = useState(0)
   useEffect(() => engine?.onAssets(() => setAssetRevision((n) => n + 1)), [engine])
+  // Functions of the project are node types; when one changes, graphs that use it render differently.
+  const functionsRevision = registry.revision?.() ?? 0
 
   // Redraw whenever what is shown, or how, changes. The engine's cache makes
   // an unchanged image a lookup.
@@ -194,7 +196,7 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
     return () => {
       stale = true
     }
-  }, [engine, presenter, graph, projectSeed, target, frameTarget, targetNode?.type, frame, frames, channel, repeats, width, height, assetRevision, sheet, seam, onion, shown])
+  }, [engine, presenter, graph, projectSeed, target, frameTarget, targetNode?.type, frame, frames, channel, repeats, width, height, assetRevision, functionsRevision, sheet, seam, onion, shown])
 
   // Seam check in numbers: how big the step from the last frame to the first is, next to the other steps.
   useEffect(() => {
@@ -221,7 +223,7 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
     return () => {
       stale = true
     }
-  }, [seam, engine, graph, projectSeed, frameTarget, target, frames, assetRevision])
+  }, [seam, engine, graph, projectSeed, frameTarget, target, frames, assetRevision, functionsRevision])
 
   const zoomBy = (factor: number): void => {
     const next = Math.min(32, Math.max(0.05, scale * factor))

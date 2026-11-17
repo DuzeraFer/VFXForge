@@ -8,7 +8,7 @@ import type { Graph, Project } from "../doc/types"
 import { Engine } from "../engine/evaluator"
 import { initGpu } from "../engine/gpu"
 import { compositeOver, defaultResultName, isResultNode, renderFrame, renderSheet, resolveTarget, type Rgba8Image } from "../engine/render"
-import { registry } from "../nodes"
+import { registry, setProjectFunctions } from "../nodes"
 import { decodeImage } from "../app/assets"
 import { renderExport } from "../export/render"
 import type { ExportImage } from "../export/types"
@@ -50,6 +50,7 @@ function toJobImage(name: string, image: Rgba8Image): JobImage {
 async function prepare(job: Job): Promise<{ engine: Engine; project: Project }> {
   const engine = await getEngine()
   const project = parseProject(job.projectText)
+  setProjectFunctions(project.graphs)
   for (const [ref, encoded] of Object.entries(job.assets ?? {})) {
     if (!engine.hasAsset(ref)) engine.setAsset(ref, await decodeImage(Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0))))
   }
@@ -79,6 +80,7 @@ async function run(job: Job): Promise<JobImage[]> {
 
   const images: JobImage[] = []
   for (const graph of project.graphs) {
+    if (graph.function) continue
     useGraph(engine, graph, project)
     for (const node of graph.nodes.filter((n) => isResultNode(n.type))) {
       const target = resolveTarget(graph, registry, node.id)

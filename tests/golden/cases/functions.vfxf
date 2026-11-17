@@ -1,0 +1,531 @@
+{
+ "version": 1,
+ "name": "functions",
+ "seed": 5,
+ "graphs": [
+  {
+   "id": "cel",
+   "name": "Cel Shade",
+   "function": true,
+   "description": "Two flat tones and a rim from any mask.",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 4,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "shape",
+     "type": "graph_input",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "name": "shape"
+     }
+    },
+    {
+     "id": "map",
+     "type": "graph_input",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "warp map",
+      "fill": [
+       0.5,
+       0.5,
+       0.5,
+       1
+      ]
+     }
+    },
+    {
+     "id": "w",
+     "type": "warp",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "intensity": 0.1
+     }
+    },
+    {
+     "id": "rim",
+     "type": "rim_shade",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "width": 0.12
+     }
+    },
+    {
+     "id": "pal",
+     "type": "palette_remap",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0,
+         0,
+         0,
+         0
+        ]
+       },
+       {
+        "position": 0.3,
+        "color": [
+         0.1,
+         0.3,
+         0.6,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.8,
+        "color": [
+         0.8,
+         0.95,
+         1,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      1000,
+      0
+     ],
+     "params": {
+      "name": "color"
+     }
+    },
+    {
+     "id": "o2",
+     "type": "output",
+     "position": [
+      1200,
+      0
+     ],
+     "params": {
+      "name": "tones"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "shape.out",
+     "to": "w.in"
+    },
+    {
+     "from": "map.out",
+     "to": "w.map"
+    },
+    {
+     "from": "w.out",
+     "to": "rim.in"
+    },
+    {
+     "from": "rim.out",
+     "to": "pal.in"
+    },
+    {
+     "from": "pal.out",
+     "to": "o.in"
+    },
+    {
+     "from": "rim.out",
+     "to": "o2.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "w",
+     "param": "intensity",
+     "as": "wobble",
+     "label": "How much the warp map bends the shape"
+    },
+    {
+     "nodeId": "rim",
+     "param": "angle",
+     "as": "light"
+    },
+    {
+     "nodeId": "pal",
+     "param": "gradient",
+     "as": "palette"
+    }
+   ]
+  },
+  {
+   "id": "cel_star",
+   "name": "Cel Star",
+   "function": true,
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 4,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "anime_star",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "outer": 0.7
+     }
+    },
+    {
+     "id": "c",
+     "type": "fn_cel",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "light": 45
+     }
+    },
+    {
+     "id": "g",
+     "type": "glow",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "radius": 0.05
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "out"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "c.shape"
+    },
+    {
+     "from": "c.color",
+     "to": "g.in"
+    },
+    {
+     "from": "g.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "s",
+     "param": "points",
+     "as": "points"
+    },
+    {
+     "nodeId": "c",
+     "param": "wobble",
+     "as": "wobble"
+    },
+    {
+     "nodeId": "c",
+     "param": "palette",
+     "as": "palette"
+    }
+   ]
+  },
+  {
+   "id": "g1",
+   "name": "use",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 4,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "t",
+     "type": "time",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "size": [
+       0.5,
+       0.5
+      ]
+     }
+    },
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "scale": 3
+     },
+     "driven": {
+      "evolution": "t.phase"
+     }
+    },
+    {
+     "id": "a",
+     "type": "fn_cel",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "wobble": 0.3
+     }
+    },
+    {
+     "id": "b",
+     "type": "fn_cel",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "light": 300,
+      "palette": [
+       {
+        "position": 0,
+        "color": [
+         0,
+         0,
+         0,
+         0
+        ]
+       },
+       {
+        "position": 0.3,
+        "color": [
+         0.6,
+         0.1,
+         0.1,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.8,
+        "color": [
+         1,
+         0.9,
+         0.3,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "st",
+     "type": "fn_cel_star",
+     "position": [
+      1000,
+      0
+     ],
+     "params": {
+      "points": 6,
+      "wobble": 0.4
+     }
+    },
+    {
+     "id": "o1",
+     "type": "output",
+     "position": [
+      1200,
+      0
+     ],
+     "params": {
+      "name": "warped"
+     }
+    },
+    {
+     "id": "o2",
+     "type": "output",
+     "position": [
+      1400,
+      0
+     ],
+     "params": {
+      "name": "plain"
+     }
+    },
+    {
+     "id": "o3",
+     "type": "output",
+     "position": [
+      1600,
+      0
+     ],
+     "params": {
+      "name": "tones"
+     }
+    },
+    {
+     "id": "o4",
+     "type": "output",
+     "position": [
+      1800,
+      0
+     ],
+     "params": {
+      "name": "nested"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "a.shape"
+    },
+    {
+     "from": "n.out",
+     "to": "a.warp_map"
+    },
+    {
+     "from": "s.out",
+     "to": "b.shape"
+    },
+    {
+     "from": "a.color",
+     "to": "o1.in"
+    },
+    {
+     "from": "b.color",
+     "to": "o2.in"
+    },
+    {
+     "from": "a.tones",
+     "to": "o3.in"
+    },
+    {
+     "from": "st.out",
+     "to": "o4.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g2",
+   "name": "driven",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 4,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "t",
+     "type": "time",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "m",
+     "type": "math",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "op": "mul",
+      "value_b": 0.5
+     }
+    },
+    {
+     "id": "st",
+     "type": "fn_cel_star",
+     "position": [
+      400,
+      0
+     ],
+     "driven": {
+      "wobble": "m.out"
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "out"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "t.phase",
+     "to": "m.a"
+    },
+    {
+     "from": "st.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  }
+ ]
+}

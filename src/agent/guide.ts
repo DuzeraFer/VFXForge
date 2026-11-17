@@ -42,6 +42,14 @@ End an animation with a \`sheet_output\` node instead of (or next to) \`output\`
 - When no node does what you need, write it: pixel_expression takes a WGSL function body (see its doc in list_node_types), and value_expression takes a formula for driving parameters, e.g. 0.5 + 0.2 * sin(phase). A mistake in either comes back as a problem on the node, with the compiler's message.
 - packed_output stores a different gray image in each channel of one texture.
 
+## Functions, exposed parameters and presets
+
+A function is a graph used as one node. \`list_functions\` shows the ones in the project and the recipes that ship with VFXForge; \`add_function\` copies a recipe in. Start from a recipe when the artist asks for one of those effects, then set its parameters (palette, wobble, ...) instead of rebuilding it. The artist can open the function and change what is inside; so can you, with \`get_graph\` and \`apply\` on its graph id, and every node that uses it follows.
+
+To make your own: \`create_graph\` with function: true, build inside it, bring pictures in through \`graph_input\` nodes (param name; kind gray or color; fill is used when nothing is connected) and send them out through \`output\` nodes. Its node type is fn_<graph id>. A function cannot use itself. \`create_function\` turns nodes that are already in a graph into one.
+
+\`expose_param\` shows a node's parameter at graph level: the artist gets the few controls that matter in one place, and on a function they become the parameters of its node. Expose the palette and two or three shape controls, with a label. \`set_presets\` stores named sets of values for the exposed parameters (for example three palettes), which the artist switches with one click.
+
 ## Export
 
 When the artist asks for files, call \`export\`. It writes every Output and Sheet Output (or the ones you name) with a sidecar JSON next to each texture, which the Unity importer uses to set up the texture and a particle system's sheet animation. Leave \`folder\` out unless the artist named one.

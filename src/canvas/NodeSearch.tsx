@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react"
 import { matchingSocket, prettyName, type PendingWire } from "../app/commands"
+import { session } from "../app/session"
+import { usesGraph } from "../engine/functions"
 import type { ResolvedNodeDef } from "../engine/nodeDef"
-import { nodeDefs } from "../nodes"
+import { registry } from "../nodes"
 
 type Props = {
   /** Position inside the canvas wrapper, in px. */
@@ -13,7 +15,7 @@ type Props = {
   onClose: () => void
 }
 
-export function searchNodes(query: string, wire: PendingWire | null, defs: readonly ResolvedNodeDef[] = nodeDefs): ResolvedNodeDef[] {
+export function searchNodes(query: string, wire: PendingWire | null, defs: readonly ResolvedNodeDef[] = registry.list()): ResolvedNodeDef[] {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   const scored: { def: ResolvedNodeDef; score: number }[] = []
   for (const def of defs) {
@@ -28,12 +30,19 @@ export function searchNodes(query: string, wire: PendingWire | null, defs: reado
   return scored.sort((a, b) => a.score - b.score || a.def.type.localeCompare(b.def.type)).map((s) => s.def)
 }
 
+/** A function cannot be put inside itself, or inside a function it uses. */
+export function usable(def: ResolvedNodeDef, graphId: string | null = session.getState().activeGraphId): boolean {
+  return graphId === null || !usesGraph(def, graphId, registry)
+}
+
 export function NodeSearch({ x, y, wire, onPick, onClose }: Props): ReactElement {
   const [query, setQuery] = useState("")
   const [index, setIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
-  const results = useMemo(() => searchNodes(query, wire), [query, wire])
+  const revision = registry.revision?.() ?? 0
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the revision stands for the list of functions
+  const results = useMemo(() => searchNodes(query, wire).filter((def) => usable(def)), [query, wire, revision])
 
   const rootRef = useRef<HTMLDivElement>(null)
   // Opened from a key press or the end of a wire drag: take focus once that

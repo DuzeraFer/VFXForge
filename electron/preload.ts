@@ -23,6 +23,11 @@ const api = {
   /** Lets the artist pick an image, copies it into the project and returns its reference. */
   importAsset: (projectPath: string | null): Promise<string | null> => ipcRenderer.invoke("asset:import", projectPath),
 
+  /** Lets the artist pick where a function file goes and writes it. Returns the path, or null if cancelled. */
+  saveFunctionFile: (text: string, suggestedName: string): Promise<string | null> => ipcRenderer.invoke("function:save", text, suggestedName),
+  /** Lets the artist pick a function file and returns its text. */
+  openFunctionFile: (): Promise<string | null> => ipcRenderer.invoke("function:open"),
+
   /** The folder of the last export, to offer it again. */
   exportLastFolder: (): Promise<string | null> => ipcRenderer.invoke("export:lastFolder"),
   exportChooseFolder: (): Promise<string | null> => ipcRenderer.invoke("export:chooseFolder"),

@@ -117,6 +117,16 @@ Not built, moved to Phase 7 because they need the function and exposed-parameter
 
 **Accept**: the artist builds a new effect mostly from shipped functions; Claude can list and use them through MCP.
 
+Status: items 1, 2 and the functions of item 4 are built.
+
+- A function is a graph marked "Use as a node". Its **Graph Input** nodes are its inputs, its Output nodes its outputs and its pinned parameters its parameters; its node type is `fn_<graph id>`. Before rendering, every function node is replaced by a copy of the function's nodes, so the engine still sees one flat graph and functions cost nothing extra. Functions can use functions, eight deep; one that uses itself is reported on the node.
+- **Make a function** (Inspector, with several nodes selected) moves the selection into a new function and wires one node in its place. **Save as a file…** writes a `.vfxfn` (the function and the functions it uses); **Open a function file…** in the Library brings one into another project.
+- The pin next to a parameter shows it at graph level, under Parameters in the graph's Inspector. **Presets** are named sets of those values.
+- Seven recipes ship in `src/library/functions/` and are listed under Recipes in the Library: Cel Fire, Cel Smoke Puff, Slash Arc, Impact Burst, Magic Ring, Lightning Bolt, Dissolve Mask. Using one copies it into the project, where it can be opened and changed. A golden case renders each, and a unit test keeps that case equal to the shipped files.
+- Claude has `list_functions`, `add_function` (copy a recipe), `create_function` (from nodes), `create_graph` with `function`, and `expose_param` / `unexpose_param` / `set_presets` in `apply`.
+
+Not built yet: the 16 in / 16 out limit is not enforced (there is no limit), gradient libraries and sampling a gradient from an image (item 3), example projects beyond the cel fire, and item 5 except auto-align, which exists since Phase 2. Image Sequence, Gradient Dynamic and Multi Blend are still open.
+
 ## Phase 8 — AI v2
 
 1. Reference board + `add_reference` / `list_references` / `render_compare`.

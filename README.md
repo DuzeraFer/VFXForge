@@ -6,7 +6,9 @@ The full spec lives in [`docs/`](docs/README.md). Build order and acceptance che
 
 ## Status
 
-**Phase 6 — More nodes.** 49 new node types, 77 in all: cartoon shading (Rim Shade, Outline, Glow), shapes for effects (Anime Star, Slash Arc, Burst, Droplet, Lightning, Spline, Trail), distortion (Polar, Curl Distort, Twirl, Mirror, Make Tileable), blurs and other filters, patterns, more noises, and two nodes that take your own code: **Pixel Expression** (a WGSL snippet) and **Value Expression** (a formula). **Packed Output** puts a different image in each channel of one texture. Before it: export and the Unity link (Phase 5), sprite sheets (Phase 4), the AI Image node (Phase 3b), Claude editing the live graph through MCP (Phase 3) and the dark "Bench" editor (Phase 2). Next: functions, presets and the shipped recipes.
+**Phase 7 — Functions, presets and recipes.** A graph can be used as one node in other graphs: select some nodes and press **Make a function**, or turn on "Use as a node" for a whole graph. Pin a parameter to show it on the graph (and on the function's node), and save named **presets** of those values. Seven **recipes** ship in the Library: Cel Fire, Cel Smoke Puff, Slash Arc, Impact Burst, Magic Ring, Lightning Bolt and Dissolve Mask. Functions can be saved as `.vfxfn` files and opened in other projects. Before it: 77 node types including Pixel Expression and Packed Output (Phase 6), export and the Unity link (Phase 5), sprite sheets (Phase 4), the AI Image node (Phase 3b), Claude editing the live graph through MCP (Phase 3) and the dark "Bench" editor (Phase 2). Next: references, comments and snapshots for working with Claude.
+
+![A slash and a magic ring from the shipped recipes](docs/progress/phase-7-functions.png)
 
 ![A slash built from the new nodes](docs/progress/phase-6-nodes.png)
 
@@ -47,7 +49,7 @@ Then ask Claude Code something like "build a cel-shaded fire in VFXForge". The a
 - If it is not, the same command works without a window: `VFXForge.exe mcp project.vfxf` opens that project, and `save_project` writes it back.
 - Clients that speak HTTP can connect to the `url` in `mcp.json` with the header `Authorization: Bearer <token>`.
 
-Tools: `get_guide`, `get_basic_info`, `get_selection`, `get_graph`, `get_node`, `list_node_types`, `get_history`, `render`, `render_frames`, `measure`, `apply`, `create_graph`, `generate_image`, `export`, `set_selection`, `save_project`, `finish_working`. See `docs/05-ai-integration.md`.
+Tools: `get_guide`, `get_basic_info`, `get_selection`, `get_graph`, `get_node`, `list_node_types`, `get_history`, `render`, `render_frames`, `measure`, `apply`, `create_graph`, `list_functions`, `add_function`, `create_function`, `generate_image`, `export`, `set_selection`, `save_project`, `finish_working`. See `docs/05-ai-integration.md`.
 
 ![Cel fire sheet rendered by the engine](docs/progress/phase-1-cel-fire.png)
 
@@ -79,6 +81,10 @@ npx electron . golden tests/golden [--update]
 
 On a machine without a GPU, set `VFXFORGE_SOFTWARE_GPU=1` (and on Linux run under `xvfb-run`).
 
+### Adding a recipe
+
+A recipe is a function file in `src/library/functions/`. Build the function in the app, use "Save as a file…" and put the `.vfxfn` there. Add it to `tests/golden/cases/recipes.vfxf` as well; a unit test checks the two stay the same.
+
 ### Adding a node
 
 Add one file in `src/nodes/` that default-exports `defineNode({...})`: sockets, parameter schema, doc string and a WGSL `fn node(uv: vec2f) -> vec4f`. Then add a graph that uses it to `tests/golden/cases/nodes.vfxf` and run `npm run test:golden:update`.
@@ -99,7 +105,7 @@ src/
   preview/   preview pane
   headless/  engine entry without UI
   export/    export settings, file names, rendering for export
-  library/   example projects
+  library/   example projects and the shipped recipe functions
 tests/
   golden/    cases (.vfxf) and expected renders
 ```

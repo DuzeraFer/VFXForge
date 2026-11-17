@@ -31,14 +31,21 @@ export type DocumentStore = {
   load: (project: Project) => void
 }
 
-export function createDocumentStore(initial: Project = createProject(), now: () => Date = () => new Date()): DocumentStore {
+/**
+ * `onProject` is told about the project first: at the start and before the
+ * listeners on every change. It is for things the listeners rely on, such as
+ * the node types that the project's functions add.
+ */
+export function createDocumentStore(initial: Project = createProject(), now: () => Date = () => new Date(), onProject?: (project: Project) => void): DocumentStore {
   let state: DocState = { project: initial, history: EMPTY_HISTORY }
+  onProject?.(initial)
   const listeners = new Set<(event: ChangeEvent) => void>()
 
   const set = (next: DocState, kind: ChangeKind, transaction?: Transaction): boolean => {
     if (next === state) return false
     const previous = state
     state = next
+    if (next.project !== previous.project) onProject?.(next.project)
     for (const listener of [...listeners]) listener({ kind, state, previous, transaction })
     return true
   }

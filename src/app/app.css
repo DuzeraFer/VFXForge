@@ -1617,3 +1617,90 @@ kbd,
   font-size: 11px;
   color: var(--color-ink-faint);
 }
+
+/* Functions and presets */
+.row-tag {
+  flex: none;
+  margin-right: auto;
+  padding: 0 5px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 14px;
+  color: var(--color-ink-muted);
+}
+.row-recipe .row-title {
+  color: var(--color-ink-muted);
+}
+.row-recipe:hover .row-title {
+  color: var(--color-ink);
+}
+.param-exposable {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+.param-exposable > .param-row {
+  flex: 1;
+  min-width: 0;
+}
+.expose-button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 28px;
+  border-radius: 4px;
+  color: var(--color-ink-faint);
+  opacity: 0;
+}
+.param-exposable:hover > .expose-button,
+.expose-button:focus-visible,
+.expose-button[data-on] {
+  opacity: 1;
+}
+.expose-button:hover {
+  color: var(--color-ink);
+}
+.expose-button[data-on] {
+  color: var(--color-select);
+}
+.preset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.preset-list:empty {
+  display: none;
+}
+.preset {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: 11px;
+  color: var(--color-ink-muted);
+}
+.preset[data-on] {
+  border-color: var(--color-select);
+  color: var(--color-select);
+}
+.preset-name {
+  padding: 0 2px 0 9px;
+  font-size: 11px;
+}
+.preset-name:hover {
+  color: var(--color-ink);
+}
+.preset-remove {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 20px;
+  margin-right: 2px;
+  color: var(--color-ink-faint);
+}
+.preset-remove:hover {
+  color: var(--color-ink);
+}

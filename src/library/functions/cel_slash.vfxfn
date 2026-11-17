@@ -1,0 +1,213 @@
+{
+ "version": 1,
+ "name": "Slash Arc",
+ "seed": 7,
+ "graphs": [
+  {
+   "id": "cel_slash",
+   "name": "Slash Arc",
+   "function": true,
+   "description": "A sword slash: a tapering arc with a torn edge, two tones and a glow.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "arc",
+     "type": "slash_arc",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "radius": 0.62,
+      "start": 200,
+      "sweep": 230,
+      "thickness": 0.3,
+      "fade": 0.35,
+      "softness": 0.5
+     }
+    },
+    {
+     "id": "curl",
+     "type": "curl_distort",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "intensity": 0.05,
+      "scale": 5,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "band",
+     "type": "band",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "thresholds": [
+       0.15,
+       0.55
+      ]
+     }
+    },
+    {
+     "id": "palette",
+     "type": "palette_remap",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0.1,
+         0.3,
+         0.9,
+         0
+        ]
+       },
+       {
+        "position": 0.33,
+        "color": [
+         0.25,
+         0.6,
+         1,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.75,
+        "color": [
+         0.92,
+         0.98,
+         1,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "glow",
+     "type": "glow",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "radius": 0.05,
+      "intensity": 0.3,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      1000,
+      0
+     ],
+     "params": {
+      "name": "color"
+     }
+    },
+    {
+     "id": "out_tones",
+     "type": "output",
+     "position": [
+      1000,
+      160
+     ],
+     "params": {
+      "name": "tones"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "arc.out",
+     "to": "curl.in"
+    },
+    {
+     "from": "curl.out",
+     "to": "band.in"
+    },
+    {
+     "from": "band.out",
+     "to": "palette.in"
+    },
+    {
+     "from": "palette.out",
+     "to": "glow.in"
+    },
+    {
+     "from": "glow.out",
+     "to": "out.in"
+    },
+    {
+     "from": "band.out",
+     "to": "out_tones.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "palette",
+     "param": "gradient",
+     "as": "palette",
+     "label": "Palette"
+    },
+    {
+     "nodeId": "arc",
+     "param": "start",
+     "as": "start",
+     "label": "Start angle"
+    },
+    {
+     "nodeId": "arc",
+     "param": "sweep",
+     "as": "sweep",
+     "label": "Sweep"
+    },
+    {
+     "nodeId": "arc",
+     "param": "thickness",
+     "as": "thickness",
+     "label": "Thickness"
+    },
+    {
+     "nodeId": "arc",
+     "param": "radius",
+     "as": "radius",
+     "label": "Radius"
+    },
+    {
+     "nodeId": "curl",
+     "param": "intensity",
+     "as": "tear",
+     "label": "Torn edge"
+    },
+    {
+     "nodeId": "glow",
+     "param": "intensity",
+     "as": "glow",
+     "label": "Glow"
+    }
+   ]
+  }
+ ]
+}

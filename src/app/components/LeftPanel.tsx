@@ -1,13 +1,15 @@
 import { useMemo, useState, type ReactElement, type ReactNode } from "react"
-import { searchNodes } from "../../canvas/NodeSearch"
+import { searchNodes, usable } from "../../canvas/NodeSearch"
 import type { Graph, Transaction } from "../../doc"
-import { nodeDefs } from "../../nodes"
+import { registry } from "../../nodes"
+import { recipes } from "../../library/recipes"
 import { addGraph, addNodeAtCenter, prettyName } from "../commands"
-import { session, type ActivityEntry } from "../session"
+import { addRecipe, importFunctionFromFile } from "../functions"
+import { session, useSession, type ActivityEntry } from "../session"
 import { Icon } from "./Icon"
 
 /** Library categories in the order of docs/04-node-library.md. */
-const CATEGORY_ORDER = ["Inputs", "Shapes", "Splines", "Noises", "Patterns", "Transform", "Tone & Color", "Filters", "Blending", "Math", "Outputs"]
+const CATEGORY_ORDER = ["Inputs", "Shapes", "Splines", "Noises", "Patterns", "Transform", "Tone & Color", "Filters", "Blending", "Math", "Outputs", "Functions"]
 
 function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }): ReactElement {
   const [open, setOpen] = useState(true)
@@ -28,11 +30,18 @@ function Library(): ReactElement {
   const [query, setQuery] = useState("")
   // Categories start folded, as in the design; searching opens the ones with matches.
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set())
+  const revision = registry.revision?.() ?? 0
+  const { activeGraphId, project } = useSession()
+  // A recipe already copied into the project is listed under Functions instead.
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+  const shipped = recipes.filter((r) => !project.graphs.some((g) => g.id === r.id && g.function)).filter((r) => words.every((w) => `${r.name} ${r.description} recipes`.toLowerCase().includes(w)))
   const groups = useMemo(() => {
-    const found = searchNodes(query, null)
+    const nodeDefs = registry.list().filter((def) => usable(def, activeGraphId))
+    const found = searchNodes(query, null, nodeDefs)
     const names = [...CATEGORY_ORDER, ...new Set(nodeDefs.map((d) => d.category).filter((c) => !CATEGORY_ORDER.includes(c)))]
     return names.map((name) => ({ name, total: nodeDefs.filter((d) => d.category === name).length, defs: found.filter((d) => d.category === name) }))
-  }, [query])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the revision stands for the list of functions
+  }, [query, revision, activeGraphId])
   const searching = query.trim() !== ""
 
   return (
@@ -69,7 +78,7 @@ function Library(): ReactElement {
                     {group.defs.map((def) => (
                       <li key={def.type}>
                         <button className="row row-button row-node" title={def.doc} onClick={() => addNodeAtCenter(def.type)} data-node-type={def.type}>
-                          <span className="socket-dot" data-type={Object.values(def.outputs)[0]?.startsWith("same:") ? "image" : Object.values(def.outputs)[0]} />
+                          <span className="socket-dot" data-type={/^(same|param):/.test(Object.values(def.outputs)[0] ?? "") ? "image" : Object.values(def.outputs)[0]} />
                           <span className="row-title">{prettyName(def.type)}</span>
                         </button>
                       </li>
@@ -79,6 +88,43 @@ function Library(): ReactElement {
               </li>
             )
           })}
+        {shipped.length > 0 && (
+          <li>
+            <button
+              className="row row-button row-category"
+              aria-expanded={searching || opened.has("Recipes")}
+              onClick={() =>
+                setOpened((current) => {
+                  const next = new Set(current)
+                  if (!next.delete("Recipes")) next.add("Recipes")
+                  return next
+                })
+              }
+            >
+              <span className="row-title">Recipes</span>
+              <span className="row-meta">{shipped.length}</span>
+            </button>
+            {(searching || opened.has("Recipes")) && (
+              <ul className="row-list">
+                {shipped.map((r) => (
+                  <li key={r.id}>
+                    <button className="row row-button row-node row-recipe" title={`${r.description} Adding it copies the function into this project, where you can open and change it.`} onClick={() => addRecipe(r.id)} data-recipe={r.id}>
+                      <span className="socket-dot" data-type="color" />
+                      <span className="row-title">{r.name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        )}
+        {!searching && window.vfxforge && (
+          <li>
+            <button className="row row-button row-node row-recipe" title="Adds a function saved from another project (.vfxfn)" onClick={() => void importFunctionFromFile()} data-testid="import-function">
+              <span className="row-title">Open a function file…</span>
+            </button>
+          </li>
+        )}
       </ul>
     </>
   )
@@ -168,6 +214,7 @@ export function LeftPanel({ graphs, activeGraphId, history, activity }: Props): 
               <li key={graph.id}>
                 <button className="row row-button" aria-current={graph.id === activeGraphId} onClick={() => session.setActiveGraph(graph.id)}>
                   <span className="row-title">{graph.name}</span>
+                  {graph.function && <span className="row-tag" title="A function: other graphs can use it as a node">fn</span>}
                   <span className="row-meta">
                     {graph.settings.width}×{graph.settings.height}
                     {graph.settings.frames > 1 ? ` · ${graph.settings.frames}f` : ""}

@@ -1,0 +1,191 @@
+{
+ "version": 1,
+ "name": "Dissolve Mask",
+ "seed": 7,
+ "graphs": [
+  {
+   "id": "dissolve_mask",
+   "name": "Dissolve Mask",
+   "function": true,
+   "description": "Eats any shape away with a cell and cloud pattern. Outputs the eaten shape and the pattern itself, for dissolving in a shader. Without a shape it uses the whole image.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "shape",
+     "type": "graph_input",
+     "position": [
+      0,
+      160
+     ],
+     "params": {
+      "name": "shape",
+      "fill": [
+       1,
+       1,
+       1,
+       1
+      ]
+     }
+    },
+    {
+     "id": "cells",
+     "type": "voronoi",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "scale": 7
+     }
+    },
+    {
+     "id": "clouds",
+     "type": "perlin",
+     "position": [
+      0,
+      320
+     ],
+     "params": {
+      "scale": 3,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "mix",
+     "type": "warp",
+     "position": [
+      200,
+      0
+     ],
+     "name": "Clouds bend the cells",
+     "params": {
+      "intensity": 0.25
+     }
+    },
+    {
+     "id": "erode",
+     "type": "erosion",
+     "position": [
+      400,
+      160
+     ],
+     "params": {
+      "amount": 0.8
+     }
+    },
+    {
+     "id": "cut",
+     "type": "band",
+     "position": [
+      600,
+      160
+     ],
+     "name": "Hard edge",
+     "params": {
+      "thresholds": [
+       0.5
+      ]
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      800,
+      160
+     ],
+     "params": {
+      "name": "mask"
+     }
+    },
+    {
+     "id": "out_map",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "map"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "cells.out",
+     "to": "mix.in"
+    },
+    {
+     "from": "clouds.out",
+     "to": "mix.map"
+    },
+    {
+     "from": "shape.out",
+     "to": "erode.in"
+    },
+    {
+     "from": "mix.out",
+     "to": "erode.map"
+    },
+    {
+     "from": "erode.out",
+     "to": "cut.in"
+    },
+    {
+     "from": "cut.out",
+     "to": "out.in"
+    },
+    {
+     "from": "mix.out",
+     "to": "out_map.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "erode",
+     "param": "amount",
+     "as": "amount",
+     "label": "Amount"
+    },
+    {
+     "nodeId": "cells",
+     "param": "scale",
+     "as": "cells",
+     "label": "Cell scale"
+    },
+    {
+     "nodeId": "clouds",
+     "param": "scale",
+     "as": "clouds",
+     "label": "Cloud scale"
+    },
+    {
+     "nodeId": "mix",
+     "param": "intensity",
+     "as": "bend",
+     "label": "Bend"
+    },
+    {
+     "nodeId": "cells",
+     "param": "seed",
+     "as": "seed",
+     "label": "Seed"
+    },
+    {
+     "nodeId": "cut",
+     "param": "softness",
+     "as": "softness",
+     "label": "Soft edge"
+    }
+   ]
+  }
+ ]
+}

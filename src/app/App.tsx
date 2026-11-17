@@ -40,7 +40,9 @@ export function App(): ReactElement {
   const activeGraph = doc.activeGraph
   const [tool, setTool] = useState<ToolId>("select")
   const agentNames = useMemo(() => doc.agent.working.map((a) => a.name), [doc.agent.working])
-  const resolved = useMemo(() => (activeGraph ? resolveGraph(activeGraph, registry) : null), [activeGraph])
+  const functionsRevision = registry.revision?.() ?? 0
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the revision stands for the project's functions
+  const resolved = useMemo(() => (activeGraph ? resolveGraph(activeGraph, registry) : null), [activeGraph, functionsRevision])
 
   useEffect(
     () =>

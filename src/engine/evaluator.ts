@@ -13,16 +13,20 @@ import { parseSocketRef, type Graph, type Node, type ParamValue } from "../doc/t
 import type { GpuContext } from "./gpu"
 import type { DataType, EvalContext, NodeRegistry, ResolvedNodeDef, SheetPlan } from "./nodeDef"
 import { createSheetBlitter, sheetSize, type SheetBlitter } from "./sheet"
+import { expandFunctions, outerNodeId, type Expanded } from "./functions"
 import { buildLayout, buildShader, codeProblem, hashText, GLOBALS_SIZE, packGlobals, packParams, variantKey, type InputBinding, type UniformLayout } from "./shader"
 import { resolveGraph, type Problem, type ResolvedGraph } from "./validate"
 
 export class EvalError extends Error {
+  readonly nodeId: string
   constructor(
-    readonly nodeId: string,
+    nodeId: string,
     message: string,
     readonly problems: Problem[] = []
   ) {
     super(message)
+    // A node inside a function is reported on the function's node, which is what the canvas shows.
+    this.nodeId = outerNodeId(nodeId)
     this.name = "EvalError"
   }
 }
@@ -86,8 +90,15 @@ export type EngineOptions = {
 export type EngineStats = { renders: number; cacheHits: number; cachedTextures: number; cachedBytes: number }
 
 export class Engine {
+  /** The graph as given to setGraph, and what is wrong with it. */
+  private source: Graph | null = null
+  private outer: ResolvedGraph | null = null
+  /** The same graph with function nodes replaced by their contents: what is really evaluated. */
   private graph: Graph | null = null
   private resolved: ResolvedGraph | null = null
+  private aliases = new Map<string, string | null>()
+  private expandError = ""
+  private revision = -1
   private projectSeed = 0
   private nodes = new Map<string, Node>()
   private linkByTarget = new Map<string, string>()
@@ -138,20 +149,49 @@ export class Engine {
 
   /** Points the engine at a graph. Cheap: cached textures stay valid, since they are keyed by content. */
   setGraph(graph: Graph, projectSeed: number): ResolvedGraph {
-    if (graph === this.graph && projectSeed === this.projectSeed && this.resolved) return this.resolved
-    this.graph = graph
+    const revision = this.registry.revision?.() ?? 0
+    if (graph === this.source && projectSeed === this.projectSeed && revision === this.revision && this.outer) return this.outer
+    this.source = graph
+    this.revision = revision
     this.projectSeed = projectSeed
-    this.resolved = resolveGraph(graph, this.registry)
-    this.nodes = new Map(graph.nodes.map((n) => [n.id, n]))
-    this.linkByTarget = new Map(graph.links.map((l) => [l.to, l.from]))
+    this.outer = resolveGraph(graph, this.registry)
+    // Function nodes are replaced by the nodes of their functions; from here on the engine sees ordinary nodes only.
+    let expanded: Expanded = { graph, aliases: new Map() }
+    this.expandError = ""
+    try {
+      expanded = expandFunctions(graph, this.registry)
+    } catch (error) {
+      this.expandError = error instanceof Error ? error.message : String(error)
+    }
+    this.graph = expanded.graph
+    this.aliases = expanded.aliases
+    this.resolved = expanded.graph === graph ? this.outer : resolveGraph(expanded.graph, this.registry)
+    this.nodes = new Map(this.graph.nodes.map((n) => [n.id, n]))
+    this.linkByTarget = new Map(this.graph.links.map((l) => [l.to, l.from]))
     this.problemsByNode = new Map()
-    for (const problem of this.resolved.problems) {
+    for (const problem of [...this.resolved.problems, ...(this.resolved === this.outer ? [] : this.outer.problems)]) {
       const list = this.problemsByNode.get(problem.nodeId)
       if (list) list.push(problem)
       else this.problemsByNode.set(problem.nodeId, [problem])
     }
     this.memos.clear()
-    return this.resolved
+    return this.outer
+  }
+
+  /** Where an output really comes from: an output of a function node is made by a node inside the function. */
+  private origin(nodeId: string, output: string): [string, string] {
+    const key = `${nodeId}.${output}`
+    if (!this.aliases.has(key)) {
+      const problems = this.problemsByNode.get(nodeId)
+      if (problems && !this.nodes.has(nodeId)) throw new EvalError(nodeId, problems[0].message, problems)
+      return [nodeId, output]
+    }
+    const problems = this.problemsByNode.get(nodeId)
+    if (problems) throw new EvalError(nodeId, problems[0].message, problems)
+    const to = this.aliases.get(key)
+    if (to === null || to === undefined) throw new EvalError(nodeId, `Output "${output}" has nothing connected to it inside the function.`)
+    const dot = to.lastIndexOf(".")
+    return [to.slice(0, dot), to.slice(dot + 1)]
   }
 
   /**
@@ -193,7 +233,7 @@ export class Engine {
   }
 
   get problems(): Problem[] {
-    return this.resolved?.problems ?? []
+    return this.outer?.problems ?? []
   }
 
   /** Frame N is frame 0: every frame number is wrapped into the loop here, once. */
@@ -216,7 +256,9 @@ export class Engine {
     if (!node) throw new EvalError(nodeId, `No node "${nodeId}".`)
     const problems = this.problemsByNode.get(nodeId)
     if (problems) throw new EvalError(nodeId, problems[0].message, problems)
-    return { node, def: this.registry.get(node.type)! }
+    const def = this.registry.get(node.type)!
+    if (def.fn) throw new EvalError(nodeId, this.expandError || "This function could not be put in place.")
+    return { node, def }
   }
 
   private timeOf(frame: number): Pick<EvalContext, "frame" | "frames" | "fps" | "phase"> {
@@ -240,7 +282,7 @@ export class Engine {
 
   /** Value of a value-type output at a frame. */
   valueOf(nodeId: string, output: string, frame: number): number {
-    return this.valueOfFrame(nodeId, output, this.ctx(frame))
+    return this.valueOfFrame(...this.origin(nodeId, output), this.ctx(frame))
   }
 
   private valueOfFrame(nodeId: string, output: string, ctx: Ctx): number {
@@ -275,7 +317,7 @@ export class Engine {
 
   /** Content key of an image output at a frame. No GPU work. Equal keys mean equal pixels. */
   keyOf(nodeId: string, output: string, frame: number): string {
-    return this.keyOfFrame(nodeId, output, this.ctx(frame))
+    return this.keyOfFrame(...this.origin(nodeId, output), this.ctx(frame))
   }
 
   /** The cells an assemble node asks for, with the source each one draws (null: nothing is connected there). */
@@ -347,7 +389,7 @@ export class Engine {
   /** Renders (or fetches from cache) an image output at a frame. */
   evaluate(nodeId: string, output: string, frame: number): ImageResult {
     this.clock++
-    const result = this.evaluateFrame(nodeId, output, this.ctx(frame))
+    const result = this.evaluateFrame(...this.origin(nodeId, output), this.ctx(frame))
     this.evict()
     return result
   }
@@ -356,8 +398,9 @@ export class Engine {
    * Every frame of an image output in one grid, for Preview's sheet view and
    * for agents. The same drawing code as the Sheet Output node.
    */
-  evaluateSheet(nodeId: string, output: string, options: SheetOptions = {}): ImageResult {
+  evaluateSheet(outerId: string, outerOutput: string, options: SheetOptions = {}): ImageResult {
     this.clock++
+    const [nodeId, output] = this.origin(outerId, outerOutput)
     const frames = this.graph?.settings.frames ?? 1
     const plan: SheetPlan = {
       cols: Math.max(1, Math.min(frames, options.cols || Math.ceil(Math.sqrt(frames)))),

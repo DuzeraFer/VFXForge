@@ -10,7 +10,7 @@ import { checkParam, isDrivable, type DataType, type NodeRegistry, type Resolved
 export type Problem = {
   nodeId: string
   /** Stable code for tools; `message` is for people. */
-  code: "unknown_type" | "unknown_param" | "bad_param" | "unknown_socket" | "type_mismatch" | "missing_input" | "bad_driver"
+  code: "unknown_type" | "unknown_param" | "bad_param" | "unknown_socket" | "type_mismatch" | "missing_input" | "bad_driver" | "bad_function"
   message: string
 }
 
@@ -59,6 +59,20 @@ function accepts(input: string, actual: DataType): boolean {
   return input === actual
 }
 
+const checking = new Set<Graph>()
+
+/** What stops a function graph from being used, or null. Looks inside nested functions; a function that uses itself is caught here. */
+function functionProblems(graph: Graph, registry: NodeRegistry): string | null {
+  if (checking.has(graph)) return `Function "${graph.name}" uses itself.`
+  checking.add(graph)
+  try {
+    const first = resolveGraph(graph, registry).problems[0]
+    return first ? `Function "${graph.name}" has a problem at node ${first.nodeId}: ${first.message}` : null
+  } finally {
+    checking.delete(graph)
+  }
+}
+
 export function resolveGraph(graph: Graph, registry: NodeRegistry): ResolvedGraph {
   const problems: Problem[] = []
   const outputTypes = new Map<string, DataType>()
@@ -85,6 +99,11 @@ export function resolveGraph(graph: Graph, registry: NodeRegistry): ResolvedGrap
       }
       const problem = checkParam(schema, value)
       if (problem) problems.push({ nodeId: node.id, code: "bad_param", message: `Parameter "${name}" ${problem}.` })
+    }
+
+    if (def.fn) {
+      const inside = functionProblems(def.fn.graph, registry)
+      if (inside) problems.push({ nodeId: node.id, code: "bad_function", message: inside })
     }
 
     if (def.check) {
@@ -144,7 +163,11 @@ export function resolveGraph(graph: Graph, registry: NodeRegistry): ResolvedGrap
     }
 
     for (const [name, type] of Object.entries(def.outputs)) {
-      const resolved: DataType = type.startsWith("same:") ? (inputTypes[type.slice(5)] ?? "color") : (type as DataType)
+      const resolved: DataType = type.startsWith("same:")
+        ? (inputTypes[type.slice(5)] ?? "color")
+        : type.startsWith("param:")
+          ? ((node.params[type.slice(6)] ?? def.params[type.slice(6)].default) === "gray" ? "gray" : "color")
+          : (type as DataType)
       outputTypes.set(`${node.id}.${name}`, resolved)
     }
   }

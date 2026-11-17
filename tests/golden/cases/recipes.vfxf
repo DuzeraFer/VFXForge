@@ -1,0 +1,1995 @@
+{
+ "version": 1,
+ "name": "recipes",
+ "seed": 7,
+ "graphs": [
+  {
+   "id": "cel_fire",
+   "name": "Cel Fire",
+   "function": true,
+   "description": "A looping cartoon flame in three flat tones. Outputs the colored flame and the gray tones before the palette.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "t",
+     "type": "time",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "warp_noise",
+     "type": "perlin",
+     "position": [
+      200,
+      0
+     ],
+     "name": "Warp noise",
+     "params": {
+      "octaves": 2,
+      "scale": 3
+     },
+     "driven": {
+      "evolution": "t.phase"
+     }
+    },
+    {
+     "id": "erosion_noise",
+     "type": "perlin",
+     "position": [
+      200,
+      160
+     ],
+     "name": "Erosion noise",
+     "params": {
+      "octaves": 2,
+      "scale": 4.8,
+      "seed": 1
+     },
+     "driven": {
+      "evolution": "t.phase"
+     }
+    },
+    {
+     "id": "flame",
+     "type": "flame_shape",
+     "position": [
+      200,
+      320
+     ],
+     "params": {
+      "bulb_r": 0.36,
+      "bulb_y": -0.45,
+      "taper": 1.1,
+      "tip_y": 0.5
+     }
+    },
+    {
+     "id": "warp",
+     "type": "warp",
+     "position": [
+      400,
+      160
+     ],
+     "params": {
+      "intensity": 0.2,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "erode",
+     "type": "erosion",
+     "position": [
+      600,
+      160
+     ],
+     "params": {
+      "amount": 0.3,
+      "bias": 0.1,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "band",
+     "type": "band",
+     "position": [
+      800,
+      160
+     ],
+     "params": {
+      "thresholds": [
+       -0.08,
+       0,
+       0.13
+      ]
+     }
+    },
+    {
+     "id": "palette",
+     "type": "palette_remap",
+     "position": [
+      1000,
+      160
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0.2,
+         0.04,
+         0.02,
+         0
+        ]
+       },
+       {
+        "position": 0.25,
+        "color": [
+         0.75,
+         0.16,
+         0.05,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.5,
+        "color": [
+         1,
+         0.56,
+         0.1,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.75,
+        "color": [
+         1,
+         0.93,
+         0.55,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      1200,
+      160
+     ],
+     "params": {
+      "name": "color"
+     }
+    },
+    {
+     "id": "out_tones",
+     "type": "output",
+     "position": [
+      1200,
+      320
+     ],
+     "params": {
+      "name": "tones"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "flame.out",
+     "to": "warp.in"
+    },
+    {
+     "from": "warp_noise.out",
+     "to": "warp.map"
+    },
+    {
+     "from": "warp.out",
+     "to": "erode.in"
+    },
+    {
+     "from": "erosion_noise.out",
+     "to": "erode.map"
+    },
+    {
+     "from": "erode.out",
+     "to": "band.in"
+    },
+    {
+     "from": "band.out",
+     "to": "palette.in"
+    },
+    {
+     "from": "palette.out",
+     "to": "out.in"
+    },
+    {
+     "from": "band.out",
+     "to": "out_tones.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "palette",
+     "param": "gradient",
+     "as": "palette",
+     "label": "Palette"
+    },
+    {
+     "nodeId": "warp",
+     "param": "intensity",
+     "as": "wobble",
+     "label": "Wobble"
+    },
+    {
+     "nodeId": "erode",
+     "param": "amount",
+     "as": "break_up",
+     "label": "Break up"
+    },
+    {
+     "nodeId": "flame",
+     "param": "lean",
+     "as": "lean",
+     "label": "Lean"
+    },
+    {
+     "nodeId": "flame",
+     "param": "tip_y",
+     "as": "height",
+     "label": "Height"
+    },
+    {
+     "nodeId": "band",
+     "param": "thresholds",
+     "as": "tones",
+     "label": "Tone edges"
+    }
+   ],
+   "presets": [
+    {
+     "name": "Orange",
+     "values": {
+      "palette": [
+       {
+        "position": 0,
+        "color": [
+         0.2,
+         0.04,
+         0.02,
+         0
+        ]
+       },
+       {
+        "position": 0.25,
+        "color": [
+         0.75,
+         0.16,
+         0.05,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.5,
+        "color": [
+         1,
+         0.56,
+         0.1,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.75,
+        "color": [
+         1,
+         0.93,
+         0.55,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    },
+    {
+     "name": "Green",
+     "values": {
+      "palette": [
+       {
+        "position": 0,
+        "color": [
+         0.086,
+         0.157,
+         0.11,
+         0
+        ]
+       },
+       {
+        "position": 0.25,
+        "color": [
+         0.086,
+         0.157,
+         0.11,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.5,
+        "color": [
+         0.384,
+         0.898,
+         0.133,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.75,
+        "color": [
+         0.843,
+         1,
+         0.384,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    },
+    {
+     "name": "Blue",
+     "values": {
+      "palette": [
+       {
+        "position": 0,
+        "color": [
+         0.03,
+         0.05,
+         0.2,
+         0
+        ]
+       },
+       {
+        "position": 0.25,
+        "color": [
+         0.1,
+         0.25,
+         0.8,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.5,
+        "color": [
+         0.3,
+         0.7,
+         1,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.75,
+        "color": [
+         0.85,
+         0.97,
+         1,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "cel_smoke_puff",
+   "name": "Cel Smoke Puff",
+   "function": true,
+   "description": "A cartoon smoke puff: a lumpy blob in two flat tones with a lit rim.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "t",
+     "type": "time",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "noise",
+     "type": "perlin",
+     "position": [
+      200,
+      0
+     ],
+     "name": "Lump noise",
+     "params": {
+      "scale": 3.5,
+      "octaves": 2
+     },
+     "driven": {
+      "evolution": "t.phase"
+     }
+    },
+    {
+     "id": "blob",
+     "type": "shape",
+     "position": [
+      200,
+      160
+     ],
+     "params": {
+      "size": [
+       0.52,
+       0.52
+      ],
+      "softness": 0.25
+     }
+    },
+    {
+     "id": "warp",
+     "type": "warp",
+     "position": [
+      400,
+      160
+     ],
+     "params": {
+      "intensity": 0.35,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "rim",
+     "type": "rim_shade",
+     "position": [
+      600,
+      160
+     ],
+     "params": {
+      "width": 0.1,
+      "angle": 135,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "palette",
+     "type": "palette_remap",
+     "position": [
+      800,
+      160
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0.3,
+         0.3,
+         0.36,
+         0
+        ]
+       },
+       {
+        "position": 0.25,
+        "color": [
+         0.42,
+         0.42,
+         0.5,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.75,
+        "color": [
+         0.86,
+         0.86,
+         0.9,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      1000,
+      160
+     ],
+     "params": {
+      "name": "color"
+     }
+    },
+    {
+     "id": "out_tones",
+     "type": "output",
+     "position": [
+      1000,
+      320
+     ],
+     "params": {
+      "name": "tones"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "blob.out",
+     "to": "warp.in"
+    },
+    {
+     "from": "noise.out",
+     "to": "warp.map"
+    },
+    {
+     "from": "warp.out",
+     "to": "rim.in"
+    },
+    {
+     "from": "rim.out",
+     "to": "palette.in"
+    },
+    {
+     "from": "palette.out",
+     "to": "out.in"
+    },
+    {
+     "from": "rim.out",
+     "to": "out_tones.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "palette",
+     "param": "gradient",
+     "as": "palette",
+     "label": "Palette"
+    },
+    {
+     "nodeId": "blob",
+     "param": "size",
+     "as": "size",
+     "label": "Size"
+    },
+    {
+     "nodeId": "warp",
+     "param": "intensity",
+     "as": "lumps",
+     "label": "Lumps"
+    },
+    {
+     "nodeId": "noise",
+     "param": "scale",
+     "as": "lump_size",
+     "label": "Lump scale"
+    },
+    {
+     "nodeId": "rim",
+     "param": "angle",
+     "as": "light",
+     "label": "Light from"
+    },
+    {
+     "nodeId": "rim",
+     "param": "width",
+     "as": "rim",
+     "label": "Rim width"
+    }
+   ]
+  },
+  {
+   "id": "cel_slash",
+   "name": "Slash Arc",
+   "function": true,
+   "description": "A sword slash: a tapering arc with a torn edge, two tones and a glow.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "arc",
+     "type": "slash_arc",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "radius": 0.62,
+      "start": 200,
+      "sweep": 230,
+      "thickness": 0.3,
+      "fade": 0.35,
+      "softness": 0.5
+     }
+    },
+    {
+     "id": "curl",
+     "type": "curl_distort",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "intensity": 0.05,
+      "scale": 5,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "band",
+     "type": "band",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "thresholds": [
+       0.15,
+       0.55
+      ]
+     }
+    },
+    {
+     "id": "palette",
+     "type": "palette_remap",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0.1,
+         0.3,
+         0.9,
+         0
+        ]
+       },
+       {
+        "position": 0.33,
+        "color": [
+         0.25,
+         0.6,
+         1,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.75,
+        "color": [
+         0.92,
+         0.98,
+         1,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "glow",
+     "type": "glow",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "radius": 0.05,
+      "intensity": 0.3,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      1000,
+      0
+     ],
+     "params": {
+      "name": "color"
+     }
+    },
+    {
+     "id": "out_tones",
+     "type": "output",
+     "position": [
+      1000,
+      160
+     ],
+     "params": {
+      "name": "tones"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "arc.out",
+     "to": "curl.in"
+    },
+    {
+     "from": "curl.out",
+     "to": "band.in"
+    },
+    {
+     "from": "band.out",
+     "to": "palette.in"
+    },
+    {
+     "from": "palette.out",
+     "to": "glow.in"
+    },
+    {
+     "from": "glow.out",
+     "to": "out.in"
+    },
+    {
+     "from": "band.out",
+     "to": "out_tones.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "palette",
+     "param": "gradient",
+     "as": "palette",
+     "label": "Palette"
+    },
+    {
+     "nodeId": "arc",
+     "param": "start",
+     "as": "start",
+     "label": "Start angle"
+    },
+    {
+     "nodeId": "arc",
+     "param": "sweep",
+     "as": "sweep",
+     "label": "Sweep"
+    },
+    {
+     "nodeId": "arc",
+     "param": "thickness",
+     "as": "thickness",
+     "label": "Thickness"
+    },
+    {
+     "nodeId": "arc",
+     "param": "radius",
+     "as": "radius",
+     "label": "Radius"
+    },
+    {
+     "nodeId": "curl",
+     "param": "intensity",
+     "as": "tear",
+     "label": "Torn edge"
+    },
+    {
+     "nodeId": "glow",
+     "param": "intensity",
+     "as": "glow",
+     "label": "Glow"
+    }
+   ]
+  },
+  {
+   "id": "impact_burst",
+   "name": "Impact Burst",
+   "function": true,
+   "description": "A hit flash that plays once: a star and rays that break up from the middle outwards over the frames.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "t",
+     "type": "time",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "fade",
+     "type": "math",
+     "position": [
+      200,
+      0
+     ],
+     "name": "Break up over time",
+     "params": {
+      "op": "mul",
+      "value_b": 1.1
+     }
+    },
+    {
+     "id": "star",
+     "type": "anime_star",
+     "position": [
+      200,
+      160
+     ],
+     "params": {
+      "points": 6,
+      "outer": 0.85,
+      "inner": 0.22,
+      "curve": 2.2,
+      "softness": 0.3
+     }
+    },
+    {
+     "id": "rays",
+     "type": "burst",
+     "position": [
+      200,
+      320
+     ],
+     "params": {
+      "rays": 18,
+      "length": 0.95,
+      "hole": 0.3,
+      "width": 0.35,
+      "softness": 0.3
+     }
+    },
+    {
+     "id": "join",
+     "type": "blend",
+     "position": [
+      400,
+      160
+     ],
+     "name": "Star and rays",
+     "params": {
+      "mode": "max",
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "noise",
+     "type": "perlin",
+     "position": [
+      400,
+      320
+     ],
+     "name": "Break up noise",
+     "params": {
+      "scale": 6,
+      "octaves": 2,
+      "seed": 3
+     }
+    },
+    {
+     "id": "gray",
+     "type": "grayscale",
+     "position": [
+      600,
+      160
+     ]
+    },
+    {
+     "id": "erode",
+     "type": "erosion",
+     "position": [
+      800,
+      160
+     ],
+     "params": {
+      "bias": 0.05,
+      "tiling": "clamp"
+     },
+     "driven": {
+      "amount": "fade.out"
+     }
+    },
+    {
+     "id": "band",
+     "type": "band",
+     "position": [
+      1000,
+      160
+     ],
+     "params": {
+      "thresholds": [
+       0.2,
+       0.6
+      ]
+     }
+    },
+    {
+     "id": "palette",
+     "type": "palette_remap",
+     "position": [
+      1200,
+      160
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         1,
+         0.5,
+         0.1,
+         0
+        ]
+       },
+       {
+        "position": 0.33,
+        "color": [
+         1,
+         0.72,
+         0.2,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.75,
+        "color": [
+         1,
+         1,
+         0.9,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      1400,
+      160
+     ],
+     "params": {
+      "name": "color"
+     }
+    },
+    {
+     "id": "out_tones",
+     "type": "output",
+     "position": [
+      1400,
+      320
+     ],
+     "params": {
+      "name": "tones"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "t.phase",
+     "to": "fade.a"
+    },
+    {
+     "from": "star.out",
+     "to": "join.fg"
+    },
+    {
+     "from": "rays.out",
+     "to": "join.bg"
+    },
+    {
+     "from": "join.out",
+     "to": "gray.in"
+    },
+    {
+     "from": "gray.out",
+     "to": "erode.in"
+    },
+    {
+     "from": "noise.out",
+     "to": "erode.map"
+    },
+    {
+     "from": "erode.out",
+     "to": "band.in"
+    },
+    {
+     "from": "band.out",
+     "to": "palette.in"
+    },
+    {
+     "from": "palette.out",
+     "to": "out.in"
+    },
+    {
+     "from": "band.out",
+     "to": "out_tones.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "palette",
+     "param": "gradient",
+     "as": "palette",
+     "label": "Palette"
+    },
+    {
+     "nodeId": "star",
+     "param": "points",
+     "as": "points",
+     "label": "Star points"
+    },
+    {
+     "nodeId": "star",
+     "param": "outer",
+     "as": "size",
+     "label": "Star size"
+    },
+    {
+     "nodeId": "rays",
+     "param": "rays",
+     "as": "rays",
+     "label": "Rays"
+    },
+    {
+     "nodeId": "rays",
+     "param": "length",
+     "as": "ray_length",
+     "label": "Ray length"
+    },
+    {
+     "nodeId": "fade",
+     "param": "value_b",
+     "as": "break_up",
+     "label": "Break up"
+    }
+   ]
+  },
+  {
+   "id": "magic_ring",
+   "name": "Magic Ring",
+   "function": true,
+   "description": "A magic circle: a ring eaten by noise that runs around it, in two tones with a glow.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "t",
+     "type": "time",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "noise",
+     "type": "perlin",
+     "position": [
+      200,
+      0
+     ],
+     "name": "Noise",
+     "params": {
+      "scale": 6,
+      "octaves": 2
+     },
+     "driven": {
+      "evolution": "t.phase"
+     }
+    },
+    {
+     "id": "around",
+     "type": "polar",
+     "position": [
+      400,
+      0
+     ],
+     "name": "Wrap around",
+     "params": {
+      "mode": "to_polar",
+      "turns": 2
+     }
+    },
+    {
+     "id": "circle",
+     "type": "shape",
+     "position": [
+      400,
+      160
+     ],
+     "params": {
+      "shape": "ring",
+      "size": [
+       0.7,
+       0.7
+      ],
+      "thickness": 0.16,
+      "softness": 0.6
+     }
+    },
+    {
+     "id": "erode",
+     "type": "erosion",
+     "position": [
+      600,
+      160
+     ],
+     "params": {
+      "amount": 0.65,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "band",
+     "type": "band",
+     "position": [
+      800,
+      160
+     ],
+     "params": {
+      "thresholds": [
+       0.1,
+       0.3
+      ]
+     }
+    },
+    {
+     "id": "palette",
+     "type": "palette_remap",
+     "position": [
+      1000,
+      160
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0.45,
+         0.1,
+         0.9,
+         0
+        ]
+       },
+       {
+        "position": 0.33,
+        "color": [
+         0.62,
+         0.3,
+         1,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.75,
+        "color": [
+         0.95,
+         0.85,
+         1,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "glow",
+     "type": "glow",
+     "position": [
+      1200,
+      160
+     ],
+     "params": {
+      "radius": 0.06,
+      "intensity": 0.3,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      1400,
+      160
+     ],
+     "params": {
+      "name": "color"
+     }
+    },
+    {
+     "id": "out_tones",
+     "type": "output",
+     "position": [
+      1400,
+      320
+     ],
+     "params": {
+      "name": "tones"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "noise.out",
+     "to": "around.in"
+    },
+    {
+     "from": "circle.out",
+     "to": "erode.in"
+    },
+    {
+     "from": "around.out",
+     "to": "erode.map"
+    },
+    {
+     "from": "erode.out",
+     "to": "band.in"
+    },
+    {
+     "from": "band.out",
+     "to": "palette.in"
+    },
+    {
+     "from": "palette.out",
+     "to": "glow.in"
+    },
+    {
+     "from": "glow.out",
+     "to": "out.in"
+    },
+    {
+     "from": "band.out",
+     "to": "out_tones.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "palette",
+     "param": "gradient",
+     "as": "palette",
+     "label": "Palette"
+    },
+    {
+     "nodeId": "circle",
+     "param": "size",
+     "as": "size",
+     "label": "Size"
+    },
+    {
+     "nodeId": "circle",
+     "param": "thickness",
+     "as": "thickness",
+     "label": "Thickness"
+    },
+    {
+     "nodeId": "erode",
+     "param": "amount",
+     "as": "break_up",
+     "label": "Break up"
+    },
+    {
+     "nodeId": "noise",
+     "param": "scale",
+     "as": "detail",
+     "label": "Noise scale"
+    },
+    {
+     "nodeId": "glow",
+     "param": "intensity",
+     "as": "glow",
+     "label": "Glow"
+    }
+   ]
+  },
+  {
+   "id": "cel_lightning",
+   "name": "Lightning Bolt",
+   "function": true,
+   "description": "A lightning bolt with branches, a hot core and a colored glow. Change Evolution per frame for a new bolt.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "bolt",
+     "type": "lightning",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "width": 0.035,
+      "branches": 4,
+      "softness": 0.2
+     }
+    },
+    {
+     "id": "glow",
+     "type": "glow",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "radius": 0.07,
+      "intensity": 1.2,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "palette",
+     "type": "palette_remap",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0.2,
+         0.3,
+         1,
+         0
+        ]
+       },
+       {
+        "position": 0.35,
+        "color": [
+         0.3,
+         0.5,
+         1,
+         0.7
+        ]
+       },
+       {
+        "position": 0.8,
+        "color": [
+         0.75,
+         0.9,
+         1,
+         1
+        ]
+       },
+       {
+        "position": 1,
+        "color": [
+         1,
+         1,
+         1,
+         1
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "color"
+     }
+    },
+    {
+     "id": "out_mask",
+     "type": "output",
+     "position": [
+      600,
+      160
+     ],
+     "params": {
+      "name": "mask"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "bolt.out",
+     "to": "glow.in"
+    },
+    {
+     "from": "glow.out",
+     "to": "palette.in"
+    },
+    {
+     "from": "palette.out",
+     "to": "out.in"
+    },
+    {
+     "from": "bolt.out",
+     "to": "out_mask.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "palette",
+     "param": "gradient",
+     "as": "palette",
+     "label": "Palette"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "start",
+     "as": "start",
+     "label": "Start"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "end",
+     "as": "end",
+     "label": "End"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "jagged",
+     "as": "jagged",
+     "label": "Jagged"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "width",
+     "as": "width",
+     "label": "Width"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "branches",
+     "as": "branches",
+     "label": "Branches"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "evolution",
+     "as": "evolution",
+     "label": "Evolution"
+    },
+    {
+     "nodeId": "bolt",
+     "param": "seed",
+     "as": "seed",
+     "label": "Seed"
+    },
+    {
+     "nodeId": "glow",
+     "param": "radius",
+     "as": "glow",
+     "label": "Glow size"
+    }
+   ]
+  },
+  {
+   "id": "dissolve_mask",
+   "name": "Dissolve Mask",
+   "function": true,
+   "description": "Eats any shape away with a cell and cloud pattern. Outputs the eaten shape and the pattern itself, for dissolving in a shader. Without a shape it uses the whole image.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "shape",
+     "type": "graph_input",
+     "position": [
+      0,
+      160
+     ],
+     "params": {
+      "name": "shape",
+      "fill": [
+       1,
+       1,
+       1,
+       1
+      ]
+     }
+    },
+    {
+     "id": "cells",
+     "type": "voronoi",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "scale": 7
+     }
+    },
+    {
+     "id": "clouds",
+     "type": "perlin",
+     "position": [
+      0,
+      320
+     ],
+     "params": {
+      "scale": 3,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "mix",
+     "type": "warp",
+     "position": [
+      200,
+      0
+     ],
+     "name": "Clouds bend the cells",
+     "params": {
+      "intensity": 0.25
+     }
+    },
+    {
+     "id": "erode",
+     "type": "erosion",
+     "position": [
+      400,
+      160
+     ],
+     "params": {
+      "amount": 0.8
+     }
+    },
+    {
+     "id": "cut",
+     "type": "band",
+     "position": [
+      600,
+      160
+     ],
+     "name": "Hard edge",
+     "params": {
+      "thresholds": [
+       0.5
+      ]
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      800,
+      160
+     ],
+     "params": {
+      "name": "mask"
+     }
+    },
+    {
+     "id": "out_map",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "map"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "cells.out",
+     "to": "mix.in"
+    },
+    {
+     "from": "clouds.out",
+     "to": "mix.map"
+    },
+    {
+     "from": "shape.out",
+     "to": "erode.in"
+    },
+    {
+     "from": "mix.out",
+     "to": "erode.map"
+    },
+    {
+     "from": "erode.out",
+     "to": "cut.in"
+    },
+    {
+     "from": "cut.out",
+     "to": "out.in"
+    },
+    {
+     "from": "mix.out",
+     "to": "out_map.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "erode",
+     "param": "amount",
+     "as": "amount",
+     "label": "Amount"
+    },
+    {
+     "nodeId": "cells",
+     "param": "scale",
+     "as": "cells",
+     "label": "Cell scale"
+    },
+    {
+     "nodeId": "clouds",
+     "param": "scale",
+     "as": "clouds",
+     "label": "Cloud scale"
+    },
+    {
+     "nodeId": "mix",
+     "param": "intensity",
+     "as": "bend",
+     "label": "Bend"
+    },
+    {
+     "nodeId": "cells",
+     "param": "seed",
+     "as": "seed",
+     "label": "Seed"
+    },
+    {
+     "nodeId": "cut",
+     "param": "softness",
+     "as": "softness",
+     "label": "Soft edge"
+    }
+   ]
+  },
+  {
+   "id": "g1",
+   "name": "recipes",
+   "settings": {
+    "width": 128,
+    "height": 128,
+    "frames": 4,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "cel_fire",
+     "type": "fn_cel_fire",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o_cel_fire",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "cel_fire"
+     }
+    },
+    {
+     "id": "cel_smoke_puff",
+     "type": "fn_cel_smoke_puff",
+     "position": [
+      0,
+      160
+     ]
+    },
+    {
+     "id": "o_cel_smoke_puff",
+     "type": "output",
+     "position": [
+      200,
+      160
+     ],
+     "params": {
+      "name": "cel_smoke_puff"
+     }
+    },
+    {
+     "id": "cel_slash",
+     "type": "fn_cel_slash",
+     "position": [
+      0,
+      320
+     ]
+    },
+    {
+     "id": "o_cel_slash",
+     "type": "output",
+     "position": [
+      200,
+      320
+     ],
+     "params": {
+      "name": "cel_slash"
+     }
+    },
+    {
+     "id": "impact_burst",
+     "type": "fn_impact_burst",
+     "position": [
+      0,
+      480
+     ]
+    },
+    {
+     "id": "o_impact_burst",
+     "type": "output",
+     "position": [
+      200,
+      480
+     ],
+     "params": {
+      "name": "impact_burst"
+     }
+    },
+    {
+     "id": "magic_ring",
+     "type": "fn_magic_ring",
+     "position": [
+      0,
+      640
+     ]
+    },
+    {
+     "id": "o_magic_ring",
+     "type": "output",
+     "position": [
+      200,
+      640
+     ],
+     "params": {
+      "name": "magic_ring"
+     }
+    },
+    {
+     "id": "cel_lightning",
+     "type": "fn_cel_lightning",
+     "position": [
+      0,
+      800
+     ]
+    },
+    {
+     "id": "o_cel_lightning",
+     "type": "output",
+     "position": [
+      200,
+      800
+     ],
+     "params": {
+      "name": "cel_lightning"
+     }
+    },
+    {
+     "id": "dissolve_mask",
+     "type": "fn_dissolve_mask",
+     "position": [
+      0,
+      960
+     ]
+    },
+    {
+     "id": "o_dissolve_mask",
+     "type": "output",
+     "position": [
+      200,
+      960
+     ],
+     "params": {
+      "name": "dissolve_mask"
+     }
+    },
+    {
+     "id": "star",
+     "type": "anime_star",
+     "position": [
+      -200,
+      1200
+     ]
+    },
+    {
+     "id": "d2",
+     "type": "fn_dissolve_mask",
+     "position": [
+      0,
+      1200
+     ],
+     "params": {
+      "amount": 1,
+      "cells": 4
+     }
+    },
+    {
+     "id": "o_d2",
+     "type": "output",
+     "position": [
+      200,
+      1200
+     ],
+     "params": {
+      "name": "dissolved_star"
+     }
+    },
+    {
+     "id": "f2",
+     "type": "fn_cel_fire",
+     "position": [
+      0,
+      1360
+     ],
+     "params": {
+      "palette": [
+       {
+        "position": 0,
+        "color": [
+         0.086,
+         0.157,
+         0.11,
+         0
+        ]
+       },
+       {
+        "position": 0.25,
+        "color": [
+         0.086,
+         0.157,
+         0.11,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.5,
+        "color": [
+         0.384,
+         0.898,
+         0.133,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.75,
+        "color": [
+         0.843,
+         1,
+         0.384,
+         1
+        ],
+        "hardness": 1
+       }
+      ],
+      "lean": 0.4,
+      "wobble": 0.35
+     }
+    },
+    {
+     "id": "o_f2",
+     "type": "output",
+     "position": [
+      200,
+      1360
+     ],
+     "params": {
+      "name": "green_fire"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "cel_fire.color",
+     "to": "o_cel_fire.in"
+    },
+    {
+     "from": "cel_smoke_puff.color",
+     "to": "o_cel_smoke_puff.in"
+    },
+    {
+     "from": "cel_slash.color",
+     "to": "o_cel_slash.in"
+    },
+    {
+     "from": "impact_burst.color",
+     "to": "o_impact_burst.in"
+    },
+    {
+     "from": "magic_ring.color",
+     "to": "o_magic_ring.in"
+    },
+    {
+     "from": "cel_lightning.color",
+     "to": "o_cel_lightning.in"
+    },
+    {
+     "from": "dissolve_mask.mask",
+     "to": "o_dissolve_mask.in"
+    },
+    {
+     "from": "star.out",
+     "to": "d2.shape"
+    },
+    {
+     "from": "d2.mask",
+     "to": "o_d2.in"
+    },
+    {
+     "from": "f2.color",
+     "to": "o_f2.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  }
+ ]
+}
