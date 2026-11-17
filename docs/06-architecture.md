@@ -123,7 +123,7 @@ export default defineNode({
 ```json
 {
   "tool": "VFXForge", "version": 1,
-  "texture": "fire_cel_green_tex.png",
+  "texture": "fire_cel_green_tex.png", "width": 1024, "height": 1024,
   "sheet": { "cols": 4, "rows": 4, "frames": 16, "fps": 12, "loop": true, "padding": 2 },
   "alpha": "straight",
   "usage": "color",
@@ -136,7 +136,7 @@ export default defineNode({
 
 ```
 vfxforge render  project.vfxf [--graph g] [--output o] [--frame n|sheet] [--set key=value ...] [--seed n] [--out dir]
-vfxforge export  project.vfxf [--preset unity] [--out dir]
+vfxforge export  project.vfxf [--out dir] [--format png|tga|jpg|bmp|tiff] [--depth 8|16] [--name template] [--only output ...]
 vfxforge sweep   project.vfxf --param warp.intensity=0.2:0.6:5 --out dir
 vfxforge mcp
 ```

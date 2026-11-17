@@ -164,6 +164,22 @@ export const TOOL_SPECS: ToolSpec[] = [
     readOnly: false
   },
   {
+    name: "export",
+    description:
+      "Writes the project's results to disk as texture files, each with a .vfxforge.json sidecar that the Unity importer reads (sheet rows and columns, fps, loop, alpha, usage). Exports every Output and Sheet Output unless outputs names some (by output name or node id). Without folder, files go to the folder the artist last exported to, or to export/ next to the project. A folder you name has to be inside one of those two places. Returns the paths written.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        outputs: { type: "array", items: { type: "string" }, description: "Output names or node ids. Leave out for all." },
+        folder: { type: "string", description: "Leave out for the default folder." },
+        format: { type: "string", enum: ["png", "tga", "jpg", "bmp", "tiff"], description: "Default: the artist's last choice (png at first)." },
+        bitDepth: { type: "integer", enum: [8, 16], description: "16 only applies to png and tiff." },
+        fileName: { type: "string", description: 'File name template with {output}, {graph}, {project}. Default "{output}".' }
+      }
+    },
+    readOnly: false
+  },
+  {
     name: "set_selection",
     description: "Selects nodes in the artist's editor so the inspector and Preview show them. Does not move the view.",
     inputSchema: { type: "object", properties: { nodeIds: { type: "array", items: { type: "string" } } }, required: ["nodeIds"] },

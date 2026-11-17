@@ -14,6 +14,7 @@ import { resolveGraph, type Problem } from "../engine/validate"
 import { nodeDefs, registry } from "../nodes"
 import { graphText } from "./graphText"
 import { generateFor } from "../ai/generation"
+import { cleanSettings, exportFromApp, loadExportSettings } from "../export/run"
 import { GUIDE } from "./guide"
 import { placeNewNodes } from "./place"
 import { TOOL_SPECS } from "./toolSpecs"
@@ -481,6 +482,19 @@ export async function runTool(agent: AgentIdentity, name: string, args: Args): P
         session.agentApply(agent, id, [{ op: "add_graph", id, name, settings }], `Create graph "${name}"`, [])
         if (args.open === true) session.setActiveGraph(id)
         return text(`Created graph ${id} "${name}".${args.open === true ? " It is now open in the editor." : ""}`)
+      }
+      case "export": {
+        const last = loadExportSettings()
+        const settings = cleanSettings({
+          format: typeof args.format === "string" ? (args.format as never) : last.format,
+          bitDepth: args.bitDepth === 16 ? 16 : args.bitDepth === 8 ? 8 : last.bitDepth,
+          template: typeof args.fileName === "string" ? args.fileName : last.template
+        })
+        const only = Array.isArray(args.outputs) ? (args.outputs as unknown[]).map(String) : undefined
+        const result = await exportFromApp({ folder: typeof args.folder === "string" && args.folder.trim() ? args.folder : null, settings, only, byAgent: true })
+        if (!result.ok) throw new ToolError(result.error)
+        session.agentLog(agent.name, `Exported ${result.files.length} ${result.files.length === 1 ? "texture" : "textures"}`)
+        return text(`Wrote ${result.files.length} texture(s), each with a .vfxforge.json sidecar:\n${result.files.join("\n")}`)
       }
       case "set_selection": {
         const graph = graphOf(args)

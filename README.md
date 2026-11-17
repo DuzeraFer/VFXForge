@@ -6,7 +6,9 @@ The full spec lives in [`docs/`](docs/README.md). Build order and acceptance che
 
 ## Status
 
-**Phase 4 — Animation and sprite sheets.** A **Sheet Output** node turns a looping animation into a sprite sheet (grid, padding, color dilation under transparent pixels), **Random Flipbook** makes a grid of seed variations and **Pattern Grid** an atlas of different images. Preview can show the whole sheet, onion skins and a seam check for the loop. Before it: the AI Image node (Phase 3b), Claude editing the live graph through MCP (Phase 3) and the dark "Bench" editor (Phase 2). Next: export and the Unity link.
+**Phase 5 — Export and the Unity link.** **Export** writes every Output and Sheet Output as PNG, TGA, JPG, BMP or TIFF (8 or 16 bits), each with a `.vfxforge.json` that says how to import it. A small Unity package reads that file, sets the import settings and makes a Particle System play the sheet. Before it: sprite sheets, onion skins and the seam check (Phase 4), the AI Image node (Phase 3b), Claude editing the live graph through MCP (Phase 3) and the dark "Bench" editor (Phase 2). Next: more nodes.
+
+![The Export dialog](docs/progress/phase-5-export.png)
 
 ![The cel fire as a 16 frame sheet](docs/progress/phase-4-cel-fire-sheet.png)
 
@@ -20,6 +22,14 @@ Add an **AI Image** node (Library › Sources), write a prompt and press **Gener
 - **Model.** The default is `gpt-image-2`; change it in Settings when OpenAI releases a newer one. If a model refuses transparent backgrounds, use mask mode.
 
 The **Image Sample** node does the same for a PNG, JPEG or WebP of your own.
+
+## Export and Unity
+
+Press **Export**, choose a folder (for example one inside your Unity project's `Assets/`) and a format. Each texture gets a `<file>.vfxforge.json` next to it with the sheet's columns, rows, frames and speed, the alpha kind and the usage.
+
+In Unity, add the package from git URL `https://github.com/DuzeraFer/VFXForge.git?path=/unity/com.vfxforge.link`. Textures exported into the project then import with the right settings, and **Assets › VFXForge › Create Particle System** makes a Particle System that plays the selected sheet. See [`unity/com.vfxforge.link/README.md`](unity/com.vfxforge.link/README.md). The package has not been run in Unity yet.
+
+Claude can export with the `export` tool, but only into the folder you last exported to or the project's own folder.
 
 ## Connect Claude
 
@@ -35,7 +45,7 @@ Then ask Claude Code something like "build a cel-shaded fire in VFXForge". The a
 - If it is not, the same command works without a window: `VFXForge.exe mcp project.vfxf` opens that project, and `save_project` writes it back.
 - Clients that speak HTTP can connect to the `url` in `mcp.json` with the header `Authorization: Bearer <token>`.
 
-Tools: `get_guide`, `get_basic_info`, `get_selection`, `get_graph`, `get_node`, `list_node_types`, `get_history`, `render`, `render_frames`, `measure`, `apply`, `create_graph`, `generate_image`, `set_selection`, `save_project`, `finish_working`. See `docs/05-ai-integration.md`.
+Tools: `get_guide`, `get_basic_info`, `get_selection`, `get_graph`, `get_node`, `list_node_types`, `get_history`, `render`, `render_frames`, `measure`, `apply`, `create_graph`, `generate_image`, `export`, `set_selection`, `save_project`, `finish_working`. See `docs/05-ai-integration.md`.
 
 ![Cel fire sheet rendered by the engine](docs/progress/phase-1-cel-fire.png)
 
@@ -61,6 +71,7 @@ The same engine runs without a window:
 
 ```
 npx electron . render src/library/examples/cel_fire.vfxf --frame sheet --bg 2a1f2b --out renders
+npx electron . export src/library/examples/cel_fire.vfxf --format tga --out exported
 npx electron . golden tests/golden [--update]
 ```
 
@@ -76,6 +87,7 @@ Every push also builds the portable Windows `.exe` in GitHub Actions (artifact `
 
 ```
 docs/        the spec, plus progress screenshots
+unity/       the Unity editor package (VFXForge Link)
 electron/    main process, preload, file I/O, headless commands
 src/
   app/       React shell, panels, theme tokens, document session
@@ -84,6 +96,7 @@ src/
   nodes/     one file per node type
   preview/   preview pane
   headless/  engine entry without UI
+  export/    export settings, file names, rendering for export
   library/   example projects
 tests/
   golden/    cases (.vfxf) and expected renders

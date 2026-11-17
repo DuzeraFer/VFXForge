@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron"
 import type { OpenedProject } from "./files"
 import type { ToolCall } from "./mcp"
+import type { ExportFormat, ExportImage, ExportResult } from "../src/export/types"
 import type { AiGenerateResult, AiImageRequest, AiStatus } from "../src/ai/imageOptions"
 
 type MenuCommand = "new" | "open" | "save" | "saveAs" | "undo" | "redo"
@@ -21,6 +22,13 @@ const api = {
   readAsset: (projectPath: string | null, ref: string): Promise<Uint8Array | null> => ipcRenderer.invoke("asset:read", projectPath, ref),
   /** Lets the artist pick an image, copies it into the project and returns its reference. */
   importAsset: (projectPath: string | null): Promise<string | null> => ipcRenderer.invoke("asset:import", projectPath),
+
+  /** The folder of the last export, to offer it again. */
+  exportLastFolder: (): Promise<string | null> => ipcRenderer.invoke("export:lastFolder"),
+  exportChooseFolder: (): Promise<string | null> => ipcRenderer.invoke("export:chooseFolder"),
+  /** Writes textures with their sidecars. Agents (`byAgent`) are kept to the export folder and the project's folder. */
+  exportWrite: (folder: string | null, images: ExportImage[], format: ExportFormat, byAgent: boolean, projectPath: string | null): Promise<ExportResult> =>
+    ipcRenderer.invoke("export:write", folder, images, format, byAgent, projectPath),
 
   // AI images. The key goes in, but never comes back out.
   aiStatus: (): Promise<AiStatus> => ipcRenderer.invoke("ai:status"),

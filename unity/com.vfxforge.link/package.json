@@ -1,0 +1,9 @@
+{
+  "name": "com.vfxforge.link",
+  "version": "0.1.0",
+  "displayName": "VFXForge Link",
+  "description": "Imports textures exported by VFXForge with the right settings, and sets up a Particle System to play an exported sprite sheet.",
+  "unity": "2021.3",
+  "keywords": ["vfx", "flipbook", "sprite sheet", "particles"],
+  "author": { "name": "VFXForge" }
+}

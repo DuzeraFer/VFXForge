@@ -20,6 +20,8 @@ import { useDrag } from "./hooks/useDrag"
 import { useTheme } from "./hooks/useTheme"
 import { Toast } from "./components/Toast"
 import { Settings } from "./components/Settings"
+import { ExportDialog } from "./components/ExportDialog"
+import { engineRef } from "./engineRef"
 import { assets } from "./assetStore"
 import { generation } from "../ai/generation"
 import { documentTitle, session, useSession } from "./session"
@@ -90,7 +92,11 @@ export function App(): ReactElement {
   // Image files of the project load in the background and show up when they arrive.
   useEffect(() => {
     assets.setEngine(engine)
-    return () => assets.setEngine(null)
+    engineRef.current = engine
+    return () => {
+      assets.setEngine(null)
+      engineRef.current = null
+    }
   }, [engine])
   useEffect(() => {
     if (engine) assets.sync(doc.project, doc.path)
@@ -196,6 +202,7 @@ export function App(): ReactElement {
           <Timeline open={timelineOpen} onToggle={() => setTimelineOpen((v) => !v)} settings={activeGraph?.settings ?? null} />
           <Toast notice={doc.notice} />
           <Settings />
+          <ExportDialog />
         </EditorContext.Provider>
       )}
     </div>

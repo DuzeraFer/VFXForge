@@ -1,0 +1,9 @@
+{
+  "name": "VFXForge.Link.Editor",
+  "rootNamespace": "VFXForge.Link",
+  "references": [],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true
+}

@@ -3,6 +3,7 @@
  * one job on the same engine as the UI, and exits.
  *
  *   vfxforge render project.vfxf [--graph g] [--target t] [--frame n|sheet] [--cols n] [--bg rrggbb] [--out dir]
+ *   vfxforge export project.vfxf [--out dir] [--format png|tga|jpg|bmp|tiff] [--depth 8|16] [--name "{graph}_{output}"] [--only a,b]
  *   vfxforge golden <dir> [--update]
  */
 
@@ -12,8 +13,10 @@ import { basename, join, resolve } from "node:path"
 import { PNG } from "pngjs"
 import type { Job, JobAssets, JobImage, JobResult } from "../src/headless/jobs"
 import { assetsDir, readAsset, referencedAssets } from "./assets"
+import { DEFAULT_EXPORT, EXPORT_FORMATS, type ExportFormat, type ExportImage } from "../src/export/types"
+import { writeExport, type JpegEncoder } from "./exportFiles"
 
-export const HEADLESS_COMMANDS = ["render", "golden"] as const
+export const HEADLESS_COMMANDS = ["render", "golden", "export"] as const
 export type HeadlessCommand = (typeof HEADLESS_COMMANDS)[number]
 
 type Args = { positional: string[]; flags: Record<string, string | true> }
@@ -51,18 +54,45 @@ function assetsOf(projectFile: string, projectText: string): JobAssets {
   return assets
 }
 
-async function createRunner(): Promise<(job: Job) => Promise<JobImage[]>> {
+type Runner = ((job: Job) => Promise<JobImage[]>) & { full: (job: Job) => Promise<JobResult & { ok: true }> }
+
+async function createRunner(): Promise<Runner> {
   const win = new BrowserWindow({
     show: false,
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false }
   })
   if (process.env.ELECTRON_RENDERER_URL) await win.loadURL(`${process.env.ELECTRON_RENDERER_URL}/headless/index.html`)
   else await win.loadFile(join(__dirname, "../renderer/headless/index.html"))
-  return async (job) => {
+  const full = async (job: Job): Promise<JobResult & { ok: true }> => {
     const result = (await win.webContents.executeJavaScript(`window.vfxRunJob(${JSON.stringify(job)})`)) as JobResult
     if (!result.ok) throw new Error(result.error)
-    return result.images
+    return result
   }
+  return Object.assign(async (job: Job) => (await full(job)).images, { full })
+}
+
+/** `vfxforge export`: every Output and Sheet Output of a project, with sidecars. Default folder: `export/` next to the project. */
+async function exportProject(args: Args, jpeg: JpegEncoder): Promise<number> {
+  const file = args.positional[0]
+  if (!file) throw new Error('Usage: vfxforge export project.vfxf [--out dir] [--format png|tga|jpg|bmp|tiff] [--depth 8|16] [--name "{graph}_{output}"] [--only a,b]')
+  const flag = (name: string): string | undefined => (typeof args.flags[name] === "string" ? (args.flags[name] as string) : undefined)
+  const format = (flag("format") ?? DEFAULT_EXPORT.format) as ExportFormat
+  if (!EXPORT_FORMATS.includes(format)) throw new Error(`--format must be one of ${EXPORT_FORMATS.join(", ")}.`)
+  const depth = flag("depth") ?? "8"
+  if (depth !== "8" && depth !== "16") throw new Error("--depth must be 8 or 16.")
+  const projectText = readFileSync(file, "utf8")
+  const run = await createRunner()
+  const result = await run.full({
+    kind: "export",
+    projectText,
+    assets: assetsOf(file, projectText),
+    projectName: basename(file).replace(/\.vfxf$/i, ""),
+    settings: { format, bitDepth: depth === "16" ? 16 : 8, template: flag("name") ?? DEFAULT_EXPORT.template },
+    only: flag("only")?.split(",").map((name) => name.trim()).filter(Boolean)
+  })
+  const folder = resolve(flag("out") ?? join(resolve(file), "..", "export"))
+  for (const path of writeExport(folder, result.exported as ExportImage[], format, jpeg)) console.log(path)
+  return 0
 }
 
 function parseColor(hex: string): [number, number, number] {
@@ -171,12 +201,12 @@ async function golden(args: Args): Promise<number> {
   return failures === 0 ? 0 : 1
 }
 
-export async function runHeadless(command: HeadlessCommand, argv: string[]): Promise<void> {
+export async function runHeadless(command: HeadlessCommand, argv: string[], jpeg: JpegEncoder): Promise<void> {
   let code = 1
   try {
     await app.whenReady()
     const args = parseArgs(argv)
-    code = command === "render" ? await render(args) : await golden(args)
+    code = command === "render" ? await render(args) : command === "export" ? await exportProject(args, jpeg) : await golden(args)
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))
   }

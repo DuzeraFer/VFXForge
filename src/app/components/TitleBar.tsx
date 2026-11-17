@@ -3,6 +3,7 @@ import type { ThemeName } from "../hooks/useTheme"
 import { session } from "../session"
 import { Icon } from "./Icon"
 import { openSettings } from "./Settings"
+import { openExport } from "./ExportDialog"
 
 export type Tab = { id: string; title: string; kind: "home" | "graph" }
 
@@ -74,7 +75,7 @@ export function TitleBar({ tabs, activeTab, onSelectTab, theme, onToggleTheme, a
         <span className="avatar" title="You">
           Y
         </span>
-        <button className="button-primary" disabled title="Export arrives in Phase 5">
+        <button className="button-primary" onClick={openExport} title="Write the project's outputs to a folder" data-testid="export-open">
           Export
         </button>
       </div>

@@ -1,5 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, shell, type MenuItemConstructorOptions } from "electron"
-import { join, resolve } from "node:path"
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, safeStorage, shell, type MenuItemConstructorOptions } from "electron"
+import { dirname, join, resolve } from "node:path"
+import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import type { ExportFormat, ExportImage, ExportResult } from "../src/export/types"
+import { isInside, writeExport, type JpegEncoder } from "./exportFiles"
 import type { AiGenerateResult, AiImageRequest, AiStatus } from "../src/ai/imageOptions"
 import { aiStatus, clearKey, createAgentBudget, generateImage, readSettings, saveKey, writeSettings, type AiSettings, type KeyCrypto } from "./ai"
 import { adoptAssets, assetsDir, IMAGE_EXTENSIONS, importAsset, pruneHolding, readAsset, referencedAssets, storeAsset } from "./assets"
@@ -143,6 +146,76 @@ ipcMain.handle("asset:import", async (event, projectPath: string | null): Promis
   return importAsset(assetHome(projectPath), result.filePaths[0])
 })
 
+// ── Export (docs/06 §6.7) ─────────────────────────────────
+
+/** Electron's own JPEG encoder. Its bitmaps are BGRA. */
+export const encodeJpeg: JpegEncoder = (rgba, width, height) => {
+  const bgra = Buffer.alloc(rgba.length)
+  for (let i = 0; i < rgba.length; i += 4) {
+    bgra[i] = rgba[i + 2]
+    bgra[i + 1] = rgba[i + 1]
+    bgra[i + 2] = rgba[i]
+    bgra[i + 3] = rgba[i + 3]
+  }
+  return nativeImage.createFromBitmap(bgra, { width, height }).toJPEG(92)
+}
+
+/** The folder the artist last exported to. Agents may write there (and next to the project), nowhere else. */
+const exportMemory = (): string => join(app.getPath("userData"), "export.json")
+function lastExportFolder(): string | null {
+  try {
+    const folder = (JSON.parse(readFileSync(exportMemory(), "utf8")) as { folder?: unknown }).folder
+    return typeof folder === "string" && existsSync(folder) ? folder : null
+  } catch {
+    return null
+  }
+}
+function rememberExportFolder(folder: string): void {
+  try {
+    writeFileSync(exportMemory(), JSON.stringify({ folder }), "utf8")
+  } catch {
+    // Only a convenience.
+  }
+}
+
+ipcMain.handle("export:lastFolder", (): string | null => lastExportFolder())
+
+ipcMain.handle("export:chooseFolder", async (event): Promise<string | null> => {
+  const win = BrowserWindow.fromWebContents(event.sender)!
+  const preset = process.env.VFXFORGE_TEST_EXPORT_DIR
+  if (preset) return preset
+  const result = await dialog.showOpenDialog(win, { title: "Export to", defaultPath: lastExportFolder() ?? undefined, properties: ["openDirectory", "createDirectory"] })
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
+})
+
+/**
+ * Writes textures and their sidecars. For an agent (`byAgent`), `folder` may
+ * be left out (the artist's last export folder, or `export/` next to the
+ * project) and otherwise has to be inside one of those two places.
+ */
+ipcMain.handle("export:write", (_event, folder: string | null, images: ExportImage[], format: ExportFormat, byAgent: boolean, projectPath: string | null): ExportResult => {
+  try {
+    const last = lastExportFolder()
+    const projectDir = projectPath ? dirname(projectPath) : null
+    let target = folder ? resolve(folder) : null
+    if (byAgent) {
+      target ??= last ?? (projectDir ? join(projectDir, "export") : null)
+      if (!target) return { ok: false, error: "There is no export folder yet: the project has never been saved and the artist has not exported before. Ask them to export once from the app (Export in the title bar), or to save the project." }
+      const allowed = [last, projectDir].filter((root): root is string => root !== null)
+      if (!allowed.some((root) => isInside(target!, root))) {
+        return { ok: false, error: `Agents can only export into the artist's export folder${last ? ` (${last})` : ""} or the project's folder${projectDir ? ` (${projectDir})` : ""}. Leave folder out to use the default.` }
+      }
+    } else if (!target) {
+      return { ok: false, error: "Choose a folder to export to." }
+    }
+    const files = writeExport(target, images, format, encodeJpeg)
+    if (!byAgent) rememberExportFolder(target)
+    return { ok: true, files }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "The export failed." }
+  }
+})
+
 // ── AI images. The key stays in this process. ─────────────
 
 const keyCrypto: KeyCrypto = {
@@ -253,7 +326,7 @@ const toolRunner = createToolRunner(() => mainWindow)
 let mcpServer: McpServer | null = null
 
 if (headlessCommand) {
-  void runHeadless(headlessCommand, cliArgs.slice(1))
+  void runHeadless(headlessCommand, cliArgs.slice(1), encodeJpeg)
 } else if (mcpShim) {
   // stdout carries the protocol; the app must not print there.
   void app.whenReady().then(() =>
