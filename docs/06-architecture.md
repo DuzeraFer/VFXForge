@@ -168,3 +168,15 @@ vfxforge/
   tests/
     golden/              per-node reference renders
 ```
+
+## 6.11 Generated images (AI Image node)
+
+The AI Image node is a texture source whose pixels come from an image model instead of a shader. It must not make graphs slow, costly or non-reproducible, so:
+
+- **Generation is a deliberate action.** Changing the prompt marks the node "out of date" but calls nothing. Only the Generate button, or the agent's `generate_image` tool, makes a request. Each request costs money on the artist's own account.
+- **The result is an asset.** The PNG is written to `<project>.assets/ai/<hash>.png` next to the `.vfxf`, and the node stores that path with the prompt and settings that produced it. Evaluation reads the file like Image Sample does, so rendering, golden tests and export never touch the network.
+- **The key never leaves the main process.** It is entered in Settings, encrypted with the operating system's keychain (Electron `safeStorage`) in the user data folder, and used only for HTTPS requests from main to `api.openai.com`. It is never stored in a project, never sent to the renderer, never returned by any MCP tool, and never logged.
+- **Transparency.** The request asks for a transparent background when the model supports it. Otherwise, or when the artist prefers, alpha is taken from luminance (white = opaque), which suits masks and glows. The node outputs the color image and a gray mask.
+- **The agent.** The prompt and settings are ordinary parameters, so `set_params` and `get_node` cover them. `generate_image {graphId, nodeId}` starts a request and returns when the image is in the graph. It is refused unless the artist turned on "allow the agent to generate images", and a per-session limit caps the spend. The agent sees the image through `render`, never the key.
+- **Failure is visible and harmless.** No key, no network, a refused prompt or a rate limit show as a message on the node; the previous image stays in place.
+

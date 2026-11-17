@@ -47,6 +47,18 @@ Build order, step by step. Each phase ends with an **acceptance check** that mus
 
 **Accept**: from an empty project, Claude (through Claude Code + MCP) builds a cel-fire graph, renders it, measures it, fixes at least one issue it found, and finishes — while the artist watches it build node by node and can undo it in one step.
 
+## Phase 3b — AI Image node
+
+Texture sources made by an image model, as a normal node (04 §4.1, 06 §6.11). Comes right after Phase 3 and must not delay it.
+
+1. Image textures in the engine: asynchronous loading, the project assets folder, Image Sample node (carried over from Phase 1).
+2. OpenAI key in Settings: stored encrypted on this machine by the main process, never written to a project file, never visible to the renderer or to the agent.
+3. AI Image node: prompt, transparent background or grayscale-to-alpha, size and quality; a Generate button with progress, errors and the last result kept until a new one arrives.
+4. Results saved as PNG in the project assets folder, so a project opens, renders and exports without a network or a key.
+5. Agent access: the prompt is an ordinary parameter (`set_params`); a `generate_image` tool starts generation, behind an "allow the agent to generate images" setting with a per-session limit.
+
+**Accept**: with a key set, typing "stylized flame silhouette, white on black" and pressing Generate gives a texture that feeds Band and Palette Remap like any other node; Claude can write the prompt and trigger generation through MCP; the saved project reopens offline with the same image.
+
 ## Phase 4 — Animation and sprite sheets
 
 1. Graph frames/fps/loop settings; timeline with play, scrub, fps.
@@ -97,7 +109,7 @@ Add the P1 nodes from 04, in this order, each with a golden test:
 3. Snapshots and A/B compare.
 4. Variation explorer (seed and parameter sweeps into a pick grid); CLI `sweep`.
 5. `apply_text` (compact graph text as input).
-6. `generate_image` into an Image Sample node.
+6. More image providers for the AI Image node (Phase 3b), and image-to-image from a node's output.
 7. In-app prompt bar.
 
 **Accept**: given only the reference fire image on the board, the agent produces a sheet the artist judges "same style", with at most three rounds of comment feedback.

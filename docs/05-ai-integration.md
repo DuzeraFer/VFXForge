@@ -68,6 +68,8 @@ Kept small on purpose: one write tool that takes a list of operations is easier 
 | `finish_working` | Ends presence, clears agent highlights |
 | `generate_image(prompt, size)` (P2) | AI-generated image into a new Image Sample node |
 
+`generate_image {graphId, nodeId}` (Phase 3b) asks the AI Image node to produce its texture from its current prompt. It needs the artist's opt-in and counts against a per-session limit (06 §6.11).
+
 ### Operations accepted by `apply`
 
 ```
