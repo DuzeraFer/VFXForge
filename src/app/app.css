@@ -1,0 +1,503 @@
+/* Shell layout (docs/02-design-language.md §2.3). Hairlines, no shadows. */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-surface);
+}
+
+/* ── Title bar ─────────────────────────────────────────── */
+
+.titlebar {
+  display: flex;
+  align-items: stretch;
+  flex: none;
+  height: var(--titlebar-height);
+  border-bottom: var(--hairline);
+  background: var(--color-surface);
+  -webkit-app-region: drag;
+}
+
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  font-size: var(--text-title-size);
+  font-weight: var(--text-title-weight);
+}
+
+.tabs {
+  display: flex;
+  align-items: stretch;
+  -webkit-app-region: no-drag;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-3);
+  color: var(--color-ink-muted);
+  border-left: var(--hairline);
+}
+.tab:last-child {
+  border-right: var(--hairline);
+}
+.tab:hover {
+  color: var(--color-ink);
+}
+.tab[aria-selected="true"] {
+  color: var(--color-ink);
+  background: var(--color-surface-sunk);
+  box-shadow: inset 0 -1.5px 0 var(--color-ink);
+}
+
+.titlebar-drag {
+  flex: 1;
+}
+
+.presence {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--color-hairline-strong);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+}
+.avatar-agent {
+  border-color: var(--color-agent);
+  color: var(--color-agent);
+}
+
+.titlebar .icon-button {
+  align-self: center;
+  margin-right: var(--space-2);
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-controls-gap {
+  width: 138px;
+  flex: none;
+}
+
+/* ── Shared controls ───────────────────────────────────── */
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-button);
+  color: var(--color-ink-muted);
+}
+.icon-button:hover:not(:disabled) {
+  color: var(--color-ink);
+  background: var(--color-surface-sunk);
+}
+.icon-button:disabled,
+.field-button:disabled {
+  color: var(--color-ink-faint);
+}
+
+.field-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 22px;
+  padding: 0 6px;
+  border: var(--hairline);
+  border-radius: var(--radius-field);
+  font-size: var(--text-field-size);
+}
+
+.button-primary {
+  height: var(--row-height);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-button);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-weight: 600;
+}
+
+.empty-note {
+  margin: 0;
+  padding: var(--space-1) var(--space-3) var(--space-2);
+  color: var(--color-ink-faint);
+}
+
+/* ── Workspace grid ────────────────────────────────────── */
+
+.workspace {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+}
+
+.left-wrap,
+.right-column,
+.preview-wrap {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.resize-handle {
+  position: absolute;
+  z-index: 2;
+}
+.resize-handle-x {
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+}
+.resize-handle-right {
+  right: -4px;
+}
+.resize-handle-left {
+  left: -4px;
+}
+.resize-handle-y {
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 7px;
+  cursor: row-resize;
+}
+.resize-handle::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  background: transparent;
+}
+.resize-handle:hover::after,
+.resize-handle[data-dragging]::after {
+  background: var(--color-select);
+}
+
+/* ── Left panel ────────────────────────────────────────── */
+
+.left-wrap {
+  border-right: var(--hairline);
+}
+
+.left-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.left-panel-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.panel-section {
+  border-bottom: var(--hairline);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: var(--row-height);
+  padding: 0 var(--space-3);
+}
+
+.section-chevron {
+  display: grid;
+  color: var(--color-ink-faint);
+  transform: rotate(-90deg);
+}
+.section-chevron[data-open="true"] {
+  transform: none;
+}
+
+.section-body {
+  padding-bottom: var(--space-1);
+}
+
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  margin: 0 var(--space-2) var(--space-1);
+  padding: 0 6px;
+  border: var(--hairline);
+  border-radius: var(--radius-field);
+  background: var(--color-surface-sunk);
+  color: var(--color-ink-faint);
+}
+.search-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+}
+.search-field input::placeholder {
+  color: var(--color-ink-faint);
+}
+
+.row-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  height: var(--row-height);
+  padding: 0 var(--space-3);
+}
+.row-muted {
+  color: var(--color-ink-muted);
+}
+
+.left-panel-footer {
+  flex: none;
+  padding: var(--space-2) var(--space-3);
+  border-top: var(--hairline);
+  color: var(--color-ink-faint);
+  font-size: 11px;
+}
+
+/* ── Tool strip ────────────────────────────────────────── */
+
+.toolstrip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-top: var(--space-2);
+  border-right: var(--hairline);
+}
+
+.tool {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-field);
+  color: var(--color-ink-muted);
+}
+.tool:hover {
+  color: var(--color-ink);
+  background: var(--color-surface-sunk);
+}
+.tool[aria-pressed="true"] {
+  color: var(--color-surface);
+  background: var(--color-select);
+}
+
+/* ── Canvas ────────────────────────────────────────────── */
+
+.canvas-area {
+  position: relative;
+  min-width: 0;
+  background-color: var(--color-canvas);
+  /* Dotted grid on the 8 px snap, drawn every 3rd step. */
+  background-image: radial-gradient(circle, var(--color-hairline-strong) 1px, transparent 1.25px);
+  background-size: 24px 24px;
+  display: grid;
+  place-items: center;
+}
+
+.canvas-empty {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-canvas);
+  text-align: center;
+  color: var(--color-ink-faint);
+}
+.canvas-empty-title {
+  color: var(--color-ink-muted);
+  font-size: var(--text-title-size);
+  font-weight: var(--text-title-weight);
+  margin-bottom: 2px;
+}
+
+/* ── Right column ──────────────────────────────────────── */
+
+.right-column {
+  display: grid;
+  border-left: var(--hairline);
+}
+
+.pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  height: var(--row-height);
+  padding: 0 var(--space-3);
+}
+.pane-header-note {
+  color: var(--color-ink-faint);
+}
+
+.preview-wrap {
+  border-bottom: var(--hairline);
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.preview-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  margin: 0 var(--space-3);
+  border: var(--hairline);
+  border-radius: var(--radius-field);
+  /* The preview background is independent of the theme (docs/02 §2.4). */
+  background-color: #2a2a2a;
+  background-image: conic-gradient(#343434 25%, transparent 0 50%, #343434 0 75%, transparent 0);
+  background-size: 16px 16px;
+  overflow: hidden;
+}
+
+.preview-canvas {
+  display: block;
+}
+
+.preview-error {
+  position: absolute;
+  inset: auto var(--space-2) var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  color: var(--color-danger);
+}
+
+.preview-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  height: 36px;
+  padding: 0 var(--space-3);
+}
+.preview-zoom {
+  color: var(--color-ink-muted);
+}
+.toolbar-spacer {
+  flex: 1;
+}
+
+.inspector {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── Timeline ──────────────────────────────────────────── */
+
+.timeline {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: 36px;
+  border-top: var(--hairline);
+  background: var(--color-surface);
+}
+.timeline[data-open="false"] {
+  height: 24px;
+}
+
+.timeline-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 var(--space-3);
+}
+
+.timeline-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1;
+  padding-right: var(--space-3);
+  border-left: var(--hairline);
+  padding-left: var(--space-2);
+  height: 100%;
+}
+
+.timeline-readout {
+  padding: 0 var(--space-2);
+  color: var(--color-ink-faint);
+  white-space: nowrap;
+}
+
+.timeline-track {
+  flex: 1;
+  height: 2px;
+  background: var(--color-hairline);
+}
+
+/* ── GPU error screen ──────────────────────────────────── */
+
+.gpu-error {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: var(--color-canvas);
+  user-select: text;
+}
+
+.gpu-error-card {
+  max-width: 480px;
+  padding: var(--space-5);
+  border: var(--hairline);
+  border-radius: var(--radius-node);
+  background: var(--color-surface);
+}
+.gpu-error-label {
+  color: var(--color-danger);
+}
+.gpu-error-card h1 {
+  margin: var(--space-2) 0 var(--space-2);
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.gpu-error-card p {
+  margin: 0 0 var(--space-3);
+}
+.gpu-error-card ul {
+  margin: 0 0 var(--space-4);
+  padding-left: var(--space-4);
+  color: var(--color-ink-muted);
+}
+.gpu-error-card li {
+  margin-bottom: var(--space-1);
+}
+.gpu-error-detail {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-2);
+  border-radius: var(--radius-field);
+  background: var(--color-surface-sunk);
+  color: var(--color-ink-muted);
+  font-size: 11px;
+  white-space: pre-wrap;
+}
