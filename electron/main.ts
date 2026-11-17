@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell } from "electron"
 import { join } from "node:path"
+import { HEADLESS_COMMANDS, runHeadless, type HeadlessCommand } from "./headless"
 
 // Chromium ships WebGPU on by default on Windows. Linux still needs the flag
 // (used for development and headless checks).
@@ -7,6 +8,18 @@ if (process.platform === "linux") {
   app.commandLine.appendSwitch("enable-unsafe-webgpu")
   app.commandLine.appendSwitch("enable-features", "Vulkan")
 }
+
+// Software rendering for machines without a GPU (CI, containers).
+if (process.env.VFXFORGE_SOFTWARE_GPU === "1") {
+  app.commandLine.appendSwitch("use-angle", "swiftshader")
+  app.commandLine.appendSwitch("use-webgpu-adapter", "swiftshader")
+  app.commandLine.appendSwitch("use-vulkan", "swiftshader")
+  app.commandLine.appendSwitch("enable-unsafe-swiftshader")
+}
+
+// `vfxforge <command> ...` runs headless and exits (docs/06 §6.8).
+const cliArgs = process.argv.slice(app.isPackaged ? 1 : 2).filter((arg) => arg !== "--no-sandbox")
+const headlessCommand = HEADLESS_COMMANDS.find((command) => command === cliArgs[0]) as HeadlessCommand | undefined
 
 type ThemeName = "light" | "dark"
 
@@ -61,13 +74,17 @@ ipcMain.on("theme:set", (event, theme: unknown) => {
   }
 })
 
-void app.whenReady().then(() => {
-  createWindow()
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+if (headlessCommand) {
+  void runHeadless(headlessCommand, cliArgs.slice(1))
+} else {
+  void app.whenReady().then(() => {
+    createWindow()
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
   })
-})
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit()
-})
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") app.quit()
+  })
+}
