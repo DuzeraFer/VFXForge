@@ -12,6 +12,7 @@ import { registry, setProjectFunctions } from "../nodes"
 import { decodeImage } from "../app/assets"
 import { renderExport } from "../export/render"
 import type { ExportImage } from "../export/types"
+import { contactSheet, gridColumns, variantGraph } from "../engine/variations"
 import type { Job, JobImage, JobResult } from "./jobs"
 
 declare global {
@@ -76,6 +77,22 @@ async function run(job: Job): Promise<JobImage[]> {
         : await renderFrame(engine, target, job.frame)
     if (job.background) image = compositeOver(image, job.background)
     return [toJobImage(graph.name, image)]
+  }
+
+  if (job.kind === "sweep") {
+    const graph = pickGraph(project, job.graphId)
+    const target = resolveTarget(graph, registry, job.target)
+    const frames: Rgba8Image[] = []
+    const images: JobImage[] = []
+    for (const variation of job.variations) {
+      useGraph(engine, variantGraph(graph, variation, registry), { ...project, seed: variation.seed ?? project.seed })
+      let image = await renderFrame(engine, target, job.frame)
+      if (job.background) image = compositeOver(image, job.background)
+      frames.push(image)
+      images.push(toJobImage(`${graph.name}.${variation.label.replace(/[^A-Za-z0-9._-]+/g, "_")}`, image))
+    }
+    images.push(toJobImage(`${graph.name}.sweep`, contactSheet(frames, gridColumns(frames.length))))
+    return images
   }
 
   const images: JobImage[] = []

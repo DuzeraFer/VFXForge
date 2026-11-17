@@ -1,4 +1,6 @@
 import { useMemo, useState, type ReactElement, type ReactNode } from "react"
+import type { Reference } from "../../doc"
+import { addReferenceFromFile, deleteReference, setReferenceNote, useAssetUrl } from "../board"
 import { searchNodes, usable } from "../../canvas/NodeSearch"
 import type { Graph, Transaction } from "../../doc"
 import { registry } from "../../nodes"
@@ -130,6 +132,58 @@ function Library(): ReactElement {
   )
 }
 
+function ReferenceThumb({ reference, selected, onSelect }: { reference: Reference; selected: boolean; onSelect: () => void }): ReactElement {
+  const url = useAssetUrl(reference.image)
+  return (
+    <button className="reference-thumb" aria-pressed={selected} onClick={onSelect} title={reference.note ?? reference.name ?? reference.id} data-reference={reference.id}>
+      {url ? <img src={url} alt={reference.name ?? reference.id} draggable={false} /> : <span className="reference-missing">?</span>}
+    </button>
+  )
+}
+
+/** Pictures to work towards. A connected agent sees them, with the note on each. */
+function References({ references }: { references: readonly Reference[] }): ReactElement {
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selected = references.find((r) => r.id === selectedId)
+  if (references.length === 0) return <p className="empty-note">Add pictures of the look you are after. Claude can see them and compare its renders with them.</p>
+  return (
+    <>
+      <div className="reference-grid" data-testid="references">
+        {references.map((r) => (
+          <ReferenceThumb key={r.id} reference={r} selected={r.id === selectedId} onSelect={() => setSelectedId(r.id === selectedId ? null : r.id)} />
+        ))}
+      </div>
+      {selected && (
+        <div className="reference-detail">
+          <textarea
+            key={selected.id}
+            className="field-area"
+            rows={2}
+            defaultValue={selected.note ?? ""}
+            aria-label="Note on this reference"
+            placeholder="What to take from it, e.g. the shape language, not the color"
+            data-testid="reference-note"
+            onKeyDown={(e) => e.stopPropagation()}
+            onBlur={(e) => e.target.value.trim() !== (selected.note ?? "") && setReferenceNote(selected.id, e.target.value)}
+          />
+          <div className="reference-actions">
+            <span className="row-meta">{selected.name ?? selected.id}</span>
+            <button
+              className="text-button"
+              onClick={() => {
+                deleteReference(selected.id)
+                setSelectedId(null)
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 function HistoryList({ history }: { history: { done: readonly Transaction[]; undone: readonly Transaction[] } }): ReactElement {
   // Newest first; steps that were undone stay listed, dimmed, until a new edit replaces them.
   const undone = history.undone
@@ -191,13 +245,14 @@ function ActivityList({ activity }: { activity: readonly ActivityEntry[] }): Rea
 }
 
 type Props = {
+  references: readonly Reference[]
   graphs: Graph[]
   activeGraphId: string | null
   history: { done: readonly Transaction[]; undone: readonly Transaction[] }
   activity: readonly ActivityEntry[]
 }
 
-export function LeftPanel({ graphs, activeGraphId, history, activity }: Props): ReactElement {
+export function LeftPanel({ graphs, activeGraphId, history, activity, references }: Props): ReactElement {
   return (
     <aside className="left-panel">
       <div className="left-panel-scroll">
@@ -227,6 +282,19 @@ export function LeftPanel({ graphs, activeGraphId, history, activity }: Props): 
 
         <Section title="Library">
           <Library />
+        </Section>
+
+        <Section
+          title="References"
+          action={
+            window.vfxforge && (
+              <button className="icon-button" title="Add a reference picture" aria-label="Add a reference picture" onClick={() => void addReferenceFromFile()} data-testid="add-reference">
+                <Icon name="plus" size={14} />
+              </button>
+            )
+          }
+        >
+          <References references={references} />
         </Section>
 
         {activity.length > 0 && (

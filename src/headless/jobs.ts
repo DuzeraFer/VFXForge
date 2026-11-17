@@ -22,7 +22,19 @@ export type GoldenJob = { kind: "golden"; projectText: string; assets?: JobAsset
 /** Renders the project's outputs for export (docs/06 §6.7). */
 export type ExportJob = { kind: "export"; projectText: string; assets?: JobAssets; projectName: string; settings: import("../export/types").ExportSettings; only?: string[] }
 
-export type Job = RenderJob | GoldenJob | ExportJob
+/** Renders one target once per variation (a seed or parameter sweep), plus a contact sheet of them all. */
+export type SweepJob = {
+  kind: "sweep"
+  projectText: string
+  assets?: JobAssets
+  graphId?: string
+  target?: string
+  frame: number
+  variations: import("../engine/sweep").Variation[]
+  background?: [number, number, number]
+}
+
+export type Job = RenderJob | GoldenJob | ExportJob | SweepJob
 
 export type JobImage = { name: string; width: number; height: number; data: Uint8Array }
 

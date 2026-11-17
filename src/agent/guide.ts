@@ -5,12 +5,12 @@ VFXForge is a node editor for stylized game VFX textures and sprite sheets. You 
 
 ## The loop
 
-1. \`get_basic_info\` and \`get_selection\` to see the project and what the artist is focused on. \`get_graph\` before editing an existing graph.
+1. \`get_basic_info\` and \`get_selection\` to see the project and what the artist is focused on. If it reports references or open comments, read them with \`list_references\` and \`list_comments\` first. \`get_graph\` before editing an existing graph.
 2. \`list_node_types\` once to learn the library; query it for the parameter schema of a type before you use it.
 3. Plan the graph in a few lines.
 4. Build in small \`apply\` batches: one visual idea per batch (the base shape; then the distortion; then the bands; then the color).
 5. After every batch or two, \`render\` what you changed and \`measure\` it. Do not stack edits on something you have not looked at.
-6. Go through the review checklist, fix what fails, then \`finish_working\` with a one-line summary.
+6. Go through the review checklist, fix what fails, answer any open comments, then \`finish_working\` with a one-line summary.
 
 ## Review checklist (say one line per item before you finish)
 
@@ -41,6 +41,14 @@ End an animation with a \`sheet_output\` node instead of (or next to) \`output\`
 - polar wraps a tiling noise into rings and vortexes; mirror with mode radial makes kaleidoscopes; make_tileable removes seams.
 - When no node does what you need, write it: pixel_expression takes a WGSL function body (see its doc in list_node_types), and value_expression takes a formula for driving parameters, e.g. 0.5 + 0.2 * sin(phase). A mistake in either comes back as a problem on the node, with the compiler's message.
 - packed_output stores a different gray image in each channel of one texture.
+
+## References, comments, snapshots and variations
+
+- References are pictures of the look the artist wants, each with a note on what to take from it. Look at them (\`get_reference\`) before planning, and judge your work with \`render_compare\`: shape language and proportions first, palette second. Follow the note: "the shape, not the color" means exactly that.
+- Comments are how the artist points at a place: "this tip is too thin" on a node. \`list_comments\` shows the threads waiting for you. Fix what is asked, then \`reply\` with what you changed and resolve: true. Ask in the thread when a comment can be read two ways. Use \`comment\` yourself to leave a short plan or a question on a node.
+- \`snapshot\` a good state before a risky change, and after each round of feedback; \`render_compare\` with a snapshot shows what your change did.
+- When the choice is taste (which seed, how thick, which palette), do not guess: \`render_variations\` with offer: true puts a grid in front of the artist to click. Without offer it is a quick way for you to compare a few values of a parameter before choosing one.
+- \`apply_text\` takes a whole graph as text, in the form \`get_graph\` gives. Good for building a small graph in one go.
 
 ## Functions, exposed parameters and presets
 

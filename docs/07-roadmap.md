@@ -139,6 +139,17 @@ Not built yet: the 16 in / 16 out limit is not enforced (there is no limit), gra
 
 **Accept**: given only the reference fire image on the board, the agent produces a sheet the artist judges "same style", with at most three rounds of comment feedback.
 
+Status: items 1 to 5 are built. The acceptance run itself needs the artist and a real agent; it has not been done.
+
+- **References** (left panel): pictures with a note each, stored with the project's images. Claude has `list_references`, `get_reference`, `add_reference` (an image file by its full path; only PNG, JPEG and WebP are read) and `render_compare`, which returns the render and the reference side by side with the dominant colors of both.
+- **Comments** (Inspector): threads on a node or on the graph. A node with open threads shows a count. Claude has `list_comments` (threads whose last word is the artist's are marked as waiting), `comment` and `reply` (with `resolve`). One list covers what the spec called `get_comment_thread`.
+- **Snapshots**: the Snapshot button in the Preview, or Claude's `snapshot`, keeps a PNG of the current frame (the newest 40 are kept). **Compare** in the Preview shows a reference or snapshot right of a split that can be dragged.
+- **Variations**: `render_variations` renders up to 16 versions (other seeds or parameter values) in one grid without touching the graph; with `offer` the artist gets the grid and a click applies that version as their own undoable step. **Seeds** in the Preview does the same for eight seeds. `vfxforge sweep project.vfxf --param node.param=from:to:count` (or `--seed from:to`) writes one PNG per value and a contact sheet.
+- `apply_text` takes a whole graph in the text form `get_graph` returns and applies the difference as one step. Text read from `get_graph` and sent back unchanged does nothing.
+- References, comments and snapshots are changed through ops like everything else, so they undo, and they are saved in the `.vfxf`.
+
+Not built: more image providers and image-to-image for the AI Image node (item 6), the in-app prompt bar (item 7), comments pinned to a point on the canvas or to a frame, and "Ask Claude about this node" as a menu entry (a comment on the node does the same).
+
 ## Phase 9 — Depth and polish (P2)
 
 Substance Designer depth (Tile Sampler, Iterate, Bevel, Flood Fill, function graphs, 4096 px, EXR, `.vfxpkg` packages), particle preview, Unity live link, minimap, Learn panel, dependency manager, crash-recovery polish.

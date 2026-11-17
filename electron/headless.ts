@@ -3,6 +3,7 @@
  * one job on the same engine as the UI, and exits.
  *
  *   vfxforge render project.vfxf [--graph g] [--target t] [--frame n|sheet] [--cols n] [--bg rrggbb] [--out dir]
+ *   vfxforge sweep  project.vfxf (--param node.param=from:to:count | --seed from:to) [--graph g] [--target t] [--frame n] [--out dir]
  *   vfxforge export project.vfxf [--out dir] [--format png|tga|jpg|bmp|tiff] [--depth 8|16] [--name "{graph}_{output}"] [--only a,b]
  *   vfxforge golden <dir> [--update]
  */
@@ -12,11 +13,12 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync, rmSync
 import { basename, join, resolve } from "node:path"
 import { PNG } from "pngjs"
 import type { Job, JobAssets, JobImage, JobResult } from "../src/headless/jobs"
+import { parseSweep, type Variation } from "../src/engine/sweep"
 import { assetsDir, readAsset, referencedAssets } from "./assets"
 import { DEFAULT_EXPORT, EXPORT_FORMATS, type ExportFormat, type ExportImage } from "../src/export/types"
 import { writeExport, type JpegEncoder } from "./exportFiles"
 
-export const HEADLESS_COMMANDS = ["render", "golden", "export"] as const
+export const HEADLESS_COMMANDS = ["render", "golden", "export", "sweep"] as const
 export type HeadlessCommand = (typeof HEADLESS_COMMANDS)[number]
 
 type Args = { positional: string[]; flags: Record<string, string | true> }
@@ -131,6 +133,42 @@ async function render(args: Args): Promise<number> {
   return 0
 }
 
+/** One picture per value of a parameter, or per seed, and a contact sheet of them all. */
+async function sweep(args: Args): Promise<number> {
+  const file = args.positional[0]
+  const usage = "Usage: vfxforge sweep project.vfxf (--param node.param=from:to:count | --seed from:to) [--graph g] [--target t] [--frame n] [--bg rrggbb] [--out dir]"
+  if (!file) throw new Error(usage)
+  let variations: Variation[]
+  if (typeof args.flags.param === "string") variations = parseSweep(args.flags.param)
+  else if (typeof args.flags.seed === "string") {
+    const match = /^(\d+):(\d+)$/.exec(args.flags.seed)
+    if (!match || Number(match[2]) < Number(match[1]) || Number(match[2]) - Number(match[1]) >= 64) throw new Error("--seed needs a range of at most 64 seeds, for example 1:8.")
+    variations = Array.from({ length: Number(match[2]) - Number(match[1]) + 1 }, (_, i) => ({ label: `seed ${Number(match[1]) + i}`, seed: Number(match[1]) + i }))
+  } else throw new Error(usage)
+  const frame = Number(args.flags.frame ?? 0)
+  if (!Number.isInteger(frame)) throw new Error("--frame needs a whole number.")
+  const run = await createRunner()
+  const projectText = readFileSync(file, "utf8")
+  const images = await run({
+    kind: "sweep",
+    projectText,
+    assets: assetsOf(file, projectText),
+    graphId: typeof args.flags.graph === "string" ? args.flags.graph : undefined,
+    target: typeof args.flags.target === "string" ? args.flags.target : undefined,
+    frame,
+    variations,
+    background: typeof args.flags.bg === "string" ? parseColor(args.flags.bg) : undefined
+  })
+  const outDir = resolve(typeof args.flags.out === "string" ? args.flags.out : ".")
+  mkdirSync(outDir, { recursive: true })
+  for (const image of images) {
+    const path = join(outDir, `${image.name}.png`)
+    writeFileSync(path, encodePng(image))
+    console.log(path)
+  }
+  return 0
+}
+
 /**
  * Golden-image tests: every Output node of every `.vfxf` in `<dir>/cases` is
  * compared with `<dir>/expected/<file>/<graph>.<output>.png`.
@@ -206,7 +244,7 @@ export async function runHeadless(command: HeadlessCommand, argv: string[], jpeg
   try {
     await app.whenReady()
     const args = parseArgs(argv)
-    code = command === "render" ? await render(args) : command === "export" ? await exportProject(args, jpeg) : await golden(args)
+    code = command === "render" ? await render(args) : command === "export" ? await exportProject(args, jpeg) : command === "sweep" ? await sweep(args) : await golden(args)
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))
   }

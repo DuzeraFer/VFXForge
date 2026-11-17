@@ -4,9 +4,12 @@
  * the same ops the UI uses.
  */
 
+import { assetPixels, snapshotOp } from "../app/board"
 import { planFunctionFromNodes } from "../app/functions"
+import { offerVariations } from "../app/variations"
 import { session } from "../app/session"
-import { applyOps, BatchError, importFunctionOps, nextId, type Graph, type Op, type ParamValue, type Preset } from "../doc"
+import { addComment, addReference, applyOps, BatchError, BoardError, importFunctionOps, nextId, replyToComment, threadsOf, type Graph, type Op, type ParamValue, type Preset, type Speaker } from "../doc"
+import { contactSheet, gridColumns, MAX_VARIATIONS, seedVariations, variantGraph, type Variation } from "../engine/variations"
 import { functionType, usesGraph } from "../engine/functions"
 import { recipe, recipes } from "../library/recipes"
 import type { Engine } from "../engine/evaluator"
@@ -16,7 +19,7 @@ import { compositeOver, defaultResultName, isResultNode, resolveTarget, sheetLay
 import { resolveGraph, type Problem } from "../engine/validate"
 import type { ResolvedNodeDef } from "../engine/nodeDef"
 import { registry } from "../nodes"
-import { formatValue, graphText } from "./graphText"
+import { formatValue, graphText, graphTextOps, GraphTextError, parseGraphText } from "./graphText"
 import { generateFor } from "../ai/generation"
 import { cleanSettings, exportFromApp, loadExportSettings } from "../export/run"
 import { GUIDE } from "./guide"
@@ -60,13 +63,13 @@ function targetOf(graph: Graph, args: Args): Target {
 
 // ── Rendering ─────────────────────────────────────────────
 
-async function frameOf(graph: Graph, target: Target, frame: number): Promise<{ image: Rgba8Image; gray: boolean }> {
+async function frameOf(graph: Graph, target: Target, frame: number, seed = session.getState().project.seed): Promise<{ image: Rgba8Image; gray: boolean }> {
   if (!engine) throw new ToolError("The GPU is not ready, so nothing can be rendered right now.")
   if (!Number.isInteger(frame) || frame < 0 || frame >= graph.settings.frames) {
     throw new ToolError(`Frame ${frame} is outside this graph's ${graph.settings.frames} frame(s) (0 to ${graph.settings.frames - 1}).`)
   }
   // The preview and thumbnails share this engine, so point it at our graph right before each evaluation.
-  const { problems } = engine.setGraph(graph, session.getState().project.seed)
+  const { problems } = engine.setGraph(graph, seed)
   let result
   try {
     result = engine.evaluate(target.nodeId, target.output, frame)
@@ -343,6 +346,8 @@ function basicInfo(): ToolResult {
       nodes: g.nodes.length,
       outputs: g.nodes.filter((n) => isResultNode(n.type)).map((n) => ({ nodeId: n.id, name: n.params.name ?? defaultResultName(n.type), ...(n.type === "sheet_output" ? { sheet: true } : {}), ...(n.type === "packed_output" ? { packed: true } : {}) }))
     })),
+    references: state.project.references.length,
+    openComments: state.project.comments.filter((c) => !c.resolved && state.project.graphs.some((g) => g.id === c.graphId)).length,
     nodeTypes: registry.list().length
   })
 }
@@ -492,6 +497,208 @@ async function measure(args: Args): Promise<ToolResult> {
   return json(result)
 }
 
+// ── References, comments, snapshots, variations (docs/05 §5.7) ──
+
+const speaker = (agent: AgentIdentity): Speaker => ({ author: agent.name, agent: true })
+
+/** Runs a board change for an agent; a refusal goes back to it as the tool's error. */
+function board<T>(build: () => T): T {
+  try {
+    return build()
+  } catch (error) {
+    if (error instanceof BoardError || error instanceof BatchError) throw new ToolError(error.message)
+    throw error
+  }
+}
+
+/** Scales a picture down so its longer side is at most `limit`. */
+async function fit(image: Rgba8Image, limit: number): Promise<Rgba8Image> {
+  const scale = Math.min(1, limit / Math.max(image.width, image.height))
+  if (scale === 1) return image
+  const source = new OffscreenCanvas(image.width, image.height)
+  source.getContext("2d")!.putImageData(new ImageData(new Uint8ClampedArray(image.data), image.width, image.height), 0, 0)
+  const width = Math.max(1, Math.round(image.width * scale))
+  const height = Math.max(1, Math.round(image.height * scale))
+  const canvas = new OffscreenCanvas(width, height)
+  const context = canvas.getContext("2d")!
+  context.drawImage(source, 0, 0, width, height)
+  return { width, height, data: context.getImageData(0, 0, width, height).data }
+}
+
+/** A picture of the same height as `height`, centered in a box `width` wide. */
+async function boxed(image: Rgba8Image, width: number, height: number): Promise<Rgba8Image> {
+  const scale = Math.min(width / image.width, height / image.height)
+  const source = new OffscreenCanvas(image.width, image.height)
+  source.getContext("2d")!.putImageData(new ImageData(new Uint8ClampedArray(image.data), image.width, image.height), 0, 0)
+  const canvas = new OffscreenCanvas(width, height)
+  const context = canvas.getContext("2d")!
+  const w = image.width * scale
+  const h = image.height * scale
+  context.drawImage(source, (width - w) / 2, (height - h) / 2, w, h)
+  return { width, height, data: context.getImageData(0, 0, width, height).data }
+}
+
+function listReferences(): ToolResult {
+  const { references, snapshots = [] } = session.getState().project
+  if (references.length === 0 && snapshots.length === 0) return text("The reference board is empty and there are no snapshots. The artist adds pictures under References; you can add one with add_reference if they gave you a file.")
+  return json({
+    references: references.map((r) => ({ id: r.id, name: r.name, note: r.note })),
+    snapshots: snapshots.map((snap) => ({ id: snap.id, name: snap.name, graphId: snap.graphId, target: snap.target, frame: snap.frame, by: snap.by, time: snap.timestamp })),
+    next: "get_reference shows one. render_compare puts one next to a render."
+  })
+}
+
+/** A reference or a snapshot, by id. */
+function boardPicture(id: unknown): { image: string; label: string; note?: string } {
+  const { references, snapshots = [] } = session.getState().project
+  const reference = references.find((r) => r.id === id)
+  if (reference) return { image: reference.image, label: reference.name ?? reference.id, note: reference.note }
+  const snap = snapshots.find((item) => item.id === id)
+  if (snap) return { image: snap.image, label: snap.name }
+  throw new ToolError(`There is no reference or snapshot "${String(id)}". References: ${references.map((r) => r.id).join(", ") || "none"}. Snapshots: ${snapshots.map((item) => item.id).join(", ") || "none"}.`)
+}
+
+async function pixelsOf(ref: string, label: string): Promise<Rgba8Image> {
+  const pixels = ref ? await assetPixels(ref).catch(() => null) : null
+  if (!pixels) throw new ToolError(`The picture of "${label}" cannot be found. It may have been moved away from the project's .assets folder.`)
+  return pixels
+}
+
+async function getReference(args: Args): Promise<ToolResult> {
+  const found = boardPicture(args.id)
+  const image = await fit(await pixelsOf(found.image, found.label), 768)
+  return { content: [{ type: "text", text: `${found.label}, ${image.width}x${image.height}${found.note ? `\nThe artist's note: ${found.note}` : ""}` }, picture(flatten(image, args.background))] }
+}
+
+async function addReferenceTool(agent: AgentIdentity, args: Args): Promise<ToolResult> {
+  if (typeof args.path !== "string" || args.path.trim() === "") throw new ToolError('add_reference needs "path": the full path of an image file on this computer.')
+  const result = await window.vfxforge?.importAssetPath(session.getState().path, args.path.trim())
+  if (!result) throw new ToolError("Pictures cannot be read here.")
+  if (!result.ok) throw new ToolError(result.error)
+  const { op, id } = board(() => addReference(session.getState().project, result.ref, typeof args.name === "string" ? args.name : result.name, typeof args.note === "string" ? args.note : undefined))
+  board(() => session.agentApply(agent, session.getState().activeGraphId ?? "", [op], "Add a reference", []))
+  return text(`Added it to the reference board as ${id}.`)
+}
+
+async function renderCompare(args: Args): Promise<ToolResult> {
+  const graph = graphOf(args)
+  const target = targetOf(graph, args)
+  const found = boardPicture(args.referenceId ?? args.id)
+  const frame = typeof args.frame === "number" ? args.frame : 0
+  const mine = (await frameOf(graph, target, frame)).image
+  const other = await pixelsOf(found.image, found.label)
+  // Same height, the reference keeps its proportions.
+  const height = Math.min(512, Math.max(mine.height, 256))
+  const left = await boxed(mine, Math.round((mine.width / mine.height) * height), height)
+  const right = await boxed(other, Math.round((other.width / other.height) * height), height)
+  const gap = 8
+  const data = new Uint8ClampedArray((left.width + gap + right.width) * height * 4)
+  const width = left.width + gap + right.width
+  for (let y = 0; y < height; y++) {
+    data.set(left.data.subarray(y * left.width * 4, (y + 1) * left.width * 4), y * width * 4)
+    data.set(right.data.subarray(y * right.width * 4, (y + 1) * right.width * 4), (y * width + left.width + gap) * 4)
+  }
+  const colors = (image: Rgba8Image): unknown => measureFrame(image).dominantColors
+  const facts = { left: { what: `${target.nodeId}.${target.output}, frame ${frame}`, dominantColors: colors(mine) }, right: { what: found.label, note: found.note, dominantColors: colors(other) } }
+  return { content: [{ type: "text", text: `Left: your render. Right: ${found.label}.\n${JSON.stringify(facts, null, 1)}` }, picture(flatten({ width, height, data }, args.background))] }
+}
+
+function listComments(args: Args): ToolResult {
+  const { project } = session.getState()
+  const graphs = typeof args.graphId === "string" ? [graphOf(args)] : project.graphs
+  const lines: string[] = []
+  for (const graph of graphs) {
+    for (const thread of threadsOf(project, graph.id)) {
+      if (thread.resolved && args.includeResolved !== true) continue
+      const node = thread.nodeId ? graph.nodes.find((n) => n.id === thread.nodeId) : undefined
+      const last = thread.messages[thread.messages.length - 1]
+      lines.push(`${thread.id}  graph ${graph.id}${node ? `, node ${node.id} (${node.type})` : ", the whole graph"}${thread.resolved ? "  resolved" : last.agent ? "  answered" : "  WAITING FOR AN ANSWER"}`)
+      for (const m of thread.messages) lines.push(`   ${m.author}: ${m.text.replace(/\n/g, "\n      ")}`)
+    }
+  }
+  if (lines.length === 0) return text(args.includeResolved === true ? "There are no comments." : "There are no open comments.")
+  return text(`${lines.join("\n")}\n\nAnswer with reply (threadId, text). Fix what a comment asks for, then reply saying what you changed; add resolve: true when it is done.`)
+}
+
+function commentTool(agent: AgentIdentity, args: Args): ToolResult {
+  const graph = graphOf(args)
+  const nodeId = typeof args.nodeId === "string" && args.nodeId !== "" ? args.nodeId : undefined
+  const { op, id } = board(() => addComment(session.getState().project, { graphId: graph.id, nodeId }, String(args.text ?? ""), speaker(agent)))
+  board(() => session.agentApply(agent, graph.id, [op], nodeId ? `Comment on ${nodeId}` : "Comment on the graph", nodeId ? [nodeId] : []))
+  return text(`Posted as thread ${id}. The artist sees it on ${nodeId ? `node ${nodeId}` : "the graph"}.`)
+}
+
+function replyTool(agent: AgentIdentity, args: Args): ToolResult {
+  const { project } = session.getState()
+  const thread = project.comments.find((c) => c.id === args.threadId)
+  const op = board(() => replyToComment(project, String(args.threadId ?? ""), String(args.text ?? ""), speaker(agent), args.resolve === true))
+  board(() => session.agentApply(agent, thread?.graphId ?? session.getState().activeGraphId ?? "", [op], args.resolve === true ? "Answer and resolve a comment" : "Answer a comment", thread?.nodeId ? [thread.nodeId] : []))
+  return text(args.resolve === true ? "Answered, and the thread is resolved." : "Answered.")
+}
+
+async function snapshotTool(agent: AgentIdentity, args: Args): Promise<ToolResult> {
+  const graph = graphOf(args)
+  const target = targetOf(graph, args)
+  const frame = typeof args.frame === "number" ? args.frame : 0
+  const { image } = await frameOf(graph, target, frame)
+  const { op, id } = await snapshotOp(image, { graphId: graph.id, target: `${target.nodeId}.${target.output}`, frame, name: typeof args.name === "string" ? args.name : undefined, by: agent.name }).catch((error: unknown) => {
+    throw new ToolError(error instanceof Error ? error.message : "The snapshot could not be stored.")
+  })
+  board(() => session.agentApply(agent, graph.id, [op], "Take a snapshot", []))
+  return text(`Saved snapshot ${id} of ${target.nodeId}.${target.output}, frame ${frame}. Compare a later render with it using render_compare (referenceId: "${id}"). The artist finds it under Compare in the Preview.`)
+}
+
+async function variationsTool(agent: AgentIdentity, args: Args): Promise<ToolResult> {
+  const graph = graphOf(args)
+  const target = targetOf(graph, args)
+  const frame = typeof args.frame === "number" ? args.frame : 0
+  const { project } = session.getState()
+  let variations: Variation[]
+  if (Array.isArray(args.variations) && args.variations.length > 0) {
+    variations = (args.variations as Record<string, unknown>[]).map((raw, i) => ({
+      label: typeof raw?.label === "string" && raw.label.trim() ? raw.label.trim().slice(0, 40) : `variation ${i + 1}`,
+      ...(typeof raw?.seed === "number" ? { seed: raw.seed } : {}),
+      ...(raw?.params && typeof raw.params === "object" ? { params: raw.params as Variation["params"] } : {})
+    }))
+  } else if (typeof args.seeds === "number") variations = seedVariations(project.seed, args.seeds)
+  else throw new ToolError('render_variations needs "variations" (a list of { label, params?, seed? }) or "seeds" (how many other seeds to try).')
+  if (variations.length < 2 || variations.length > MAX_VARIATIONS) throw new ToolError(`Give 2 to ${MAX_VARIATIONS} variations.`)
+  const items: { variation: Variation; image: Rgba8Image }[] = []
+  for (const variation of variations) {
+    let variant: Graph
+    try {
+      variant = variantGraph(graph, variation, registry)
+    } catch (error) {
+      throw new ToolError(`"${variation.label}": ${error instanceof Error ? error.message : String(error)}`)
+    }
+    items.push({ variation, image: (await frameOf(variant, target, frame, variation.seed ?? project.seed)).image })
+  }
+  const cols = gridColumns(items.length)
+  const sheet = contactSheet(items.map((item) => item.image), cols, 4)
+  const list = items.map((item, i) => `${i + 1}. ${item.variation.label}`).join("\n")
+  let note = `${target.nodeId}.${target.output}, frame ${frame}. ${items.length} variations in a grid of ${cols} columns, left to right then top to bottom:\n${list}\nNothing in the graph was changed.`
+  if (args.offer === true) {
+    offerVariations({ from: agent.name, graphId: graph.id, target: `${target.nodeId}.${target.output}`, note: typeof args.note === "string" ? args.note.slice(0, 300) : undefined, items })
+    session.agentLog(agent.name, `Offered ${items.length} variations`)
+    note += "\nThe artist now sees these in a grid and can click one; their pick is applied as their own step. Ask them which they chose, or read get_history."
+  } else note += "\nTo use one yourself, apply its values with set_params. To let the artist choose, call again with offer: true."
+  return { content: [{ type: "text", text: note }, picture(flatten(sheet, args.background))] }
+}
+
+function applyText(agent: AgentIdentity, args: Args): ToolResult {
+  const graph = graphOf(args)
+  if (typeof args.text !== "string" || args.text.trim() === "") throw new ToolError('apply_text needs "text": the whole graph in the form get_graph returns.')
+  let ops: Record<string, unknown>[]
+  try {
+    ops = graphTextOps(graph, parseGraphText(args.text, registry), registry)
+  } catch (error) {
+    if (error instanceof GraphTextError) throw new ToolError(`Nothing was changed. ${error.message}`)
+    throw error
+  }
+  if (ops.length === 0) return text("The graph already is what the text says. Nothing was changed.")
+  return apply(agent, { graphId: graph.id, label: args.label, ops })
+}
+
 // ── Dispatch ──────────────────────────────────────────────
 
 const READ_ONLY = new Set(TOOL_SPECS.filter((t) => t.readOnly).map((t) => t.name))
@@ -552,6 +759,26 @@ export async function runTool(agent: AgentIdentity, name: string, args: Args): P
           }`
         )
       }
+      case "list_references":
+        return listReferences()
+      case "get_reference":
+        return await getReference(args)
+      case "add_reference":
+        return await addReferenceTool(agent, args)
+      case "render_compare":
+        return await renderCompare(args)
+      case "list_comments":
+        return listComments(args)
+      case "comment":
+        return commentTool(agent, args)
+      case "reply":
+        return replyTool(agent, args)
+      case "snapshot":
+        return await snapshotTool(agent, args)
+      case "render_variations":
+        return await variationsTool(agent, args)
+      case "apply_text":
+        return applyText(agent, args)
       case "list_functions":
         return listFunctions()
       case "create_function": {

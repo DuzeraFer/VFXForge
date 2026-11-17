@@ -150,6 +150,88 @@ export const TOOL_SPECS: ToolSpec[] = [
     readOnly: false
   },
   {
+    name: "list_references",
+    description: "The reference board: pictures the artist wants you to work towards, each with their note on what to take from it. Also lists snapshots. Look here before you start.",
+    inputSchema: { type: "object", properties: {} },
+    readOnly: true
+  },
+  {
+    name: "get_reference",
+    description: "One reference picture or snapshot as an image, with the artist's note.",
+    inputSchema: { type: "object", properties: { id: { type: "string", description: "A reference id (ref1) or snapshot id (s1) from list_references." }, background: { type: "string" } }, required: ["id"] },
+    readOnly: true
+  },
+  {
+    name: "render_compare",
+    description:
+      "One picture with your render on the left and a reference or snapshot on the right, at the same height, plus the dominant colors of both. Use it to judge shape, proportions and palette against the reference, and to see what changed since a snapshot.",
+    inputSchema: {
+      type: "object",
+      properties: { graphId, target: { type: "string" }, referenceId: { type: "string", description: "A reference or snapshot id." }, frame: { type: "integer", minimum: 0 }, background: { type: "string" } },
+      required: ["referenceId"]
+    },
+    readOnly: true
+  },
+  {
+    name: "add_reference",
+    description: "Puts an image file from this computer on the reference board (PNG, JPEG or WebP, by its full path). Only for a file the artist pointed you to.",
+    inputSchema: { type: "object", properties: { path: { type: "string" }, name: { type: "string" }, note: { type: "string", description: "What to take from it." } }, required: ["path"] },
+    readOnly: false
+  },
+  {
+    name: "list_comments",
+    description: "Comment threads the artist pinned to nodes or to a graph, with who wrote what. Threads marked WAITING FOR AN ANSWER are for you. Check this when you start and before you finish.",
+    inputSchema: { type: "object", properties: { graphId, includeResolved: { type: "boolean" } } },
+    readOnly: true
+  },
+  {
+    name: "comment",
+    description: "Starts a comment thread on a node (or on the graph, without nodeId). Use it to tell the artist something about a specific place: a plan, a question, why you made a choice. Keep it short.",
+    inputSchema: { type: "object", properties: { graphId, nodeId: { type: "string" }, text: { type: "string" } }, required: ["text"] },
+    readOnly: false
+  },
+  {
+    name: "reply",
+    description: "Answers a comment thread. After fixing what a comment asked for, say what you changed; resolve: true closes the thread.",
+    inputSchema: { type: "object", properties: { threadId: { type: "string" }, text: { type: "string" }, resolve: { type: "boolean" } }, required: ["threadId", "text"] },
+    readOnly: false
+  },
+  {
+    name: "snapshot",
+    description: "Keeps a picture of a render as it is now, so you and the artist can compare later versions with it (render_compare, or Compare in the Preview). Take one of a good state before a risky change.",
+    inputSchema: { type: "object", properties: { graphId, target: { type: "string" }, frame: { type: "integer", minimum: 0 }, name: { type: "string", description: 'For example "before thinner tip".' } } },
+    readOnly: false
+  },
+  {
+    name: "render_variations",
+    description: [
+      "Renders several versions of one target side by side without changing the graph: other seeds, or other parameter values.",
+      'variations: [{ "label": "thin", "params": { "n4": { "taper": 2 } } }, { "label": "wide", "params": { "n4": { "taper": 0.6 }, "n5": { "intensity": 0.3 } }, "seed"?: 12 }], or seeds: 6 for six other seeds.',
+      "With offer: true the artist gets the same grid and picks one with a click; their pick is applied as their own step. Use that when the choice is a matter of taste."
+    ].join("\n"),
+    inputSchema: {
+      type: "object",
+      properties: {
+        graphId,
+        target: { type: "string" },
+        frame: { type: "integer", minimum: 0 },
+        variations: { type: "array", items: { type: "object" }, minItems: 2, maxItems: 16 },
+        seeds: { type: "integer", minimum: 2, maximum: 16 },
+        offer: { type: "boolean" },
+        note: { type: "string", description: "One line shown to the artist above the grid." },
+        background: { type: "string" }
+      }
+    },
+    readOnly: true
+  },
+  {
+    name: "apply_text",
+    description:
+      'Rewrites a whole graph from text in the form get_graph returns: one line per node, "id type param=value input<-node param<-node.output \\"Name\\"". The text is the whole graph: nodes it leaves out are removed, nodes that keep their id and type keep their place. One undoable step, with the same checks as apply. Clearer than many ops for a small graph or a big restructuring; for small changes use apply.',
+    inputSchema: { type: "object", properties: { graphId, label: { type: "string" }, text: { type: "string" } }, required: ["label", "text"] },
+    readOnly: false
+  },
+  {
     name: "list_functions",
     description:
       "Functions: graphs used as one node. Lists the ones in this project (node type, inputs, outputs, parameters, presets) and the recipes that ship with VFXForge (cel fire, smoke puff, slash, impact burst, magic ring, lightning, dissolve mask). Look here before building a common effect from scratch.",

@@ -10,6 +10,7 @@ import { registry } from "../nodes"
 import { generateFor, generationKey, useGeneration } from "../ai/generation"
 import { openSettings } from "../app/components/Settings"
 import { ColorField, NumberField, Segmented, Select, Slider, TextArea, TextField, Toggle, newGesture, type Rgba } from "./fields"
+import { Comments } from "./Comments"
 import { GradientEditor } from "./GradientEditor"
 
 type Props = { project: Project; graph: Graph | null; selection: readonly string[]; problems: readonly Problem[] }
@@ -589,6 +590,7 @@ export function Inspector({ project, graph, selection, problems }: Props): React
   return (
     <section className="inspector" data-testid="inspector">
       {body}
+      {graph && nodes.length <= 1 && <Comments key={`comments:${nodes[0]?.id ?? graph.id}`} project={project} graph={graph} nodeId={nodes[0]?.id} />}
     </section>
   )
 }

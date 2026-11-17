@@ -41,7 +41,7 @@ Kept small on purpose: one write tool that takes a list of operations is easier 
 | `get_node(nodeId)` | All parameters with schema (type, range, default, current value, exposed/driven state), inputs, outputs, errors |
 | `list_node_types(query?)` | Node types with doc string, inputs, outputs, parameter schema |
 | `list_references` / `get_reference(id)` | Reference images on the board, with the artist's notes |
-| `list_comments(graphId?)` / `get_comment_thread(id)` | Comment threads pinned to nodes or canvas points |
+| `list_comments(graphId?, includeResolved?)` | Comment threads pinned to nodes or graphs, with every message; threads waiting for the agent are marked |
 | `get_history(limit)` | Recent transactions: who, label, what changed |
 
 ### See and measure
@@ -63,10 +63,12 @@ Kept small on purpose: one write tool that takes a list of operations is easier 
 | `list_functions` | The functions in the project (node type, sockets, parameters, presets) and the shipped recipes |
 | `add_function(recipe)` | Copies a shipped recipe into the project |
 | `set_selection(nodeIds)` / `focus(nodeId)` | Ask the UI to show something. Never moves the human's viewport without consent; shows a "Claude wants to show you…" pill instead |
-| `add_reference(path or url, note)` | Puts an image on the reference board |
-| `comment(target, text)` / `reply(threadId, text)` | Talk to the artist inside the document |
+| `add_reference(path, note)` | Puts an image file on the reference board (URLs are not fetched) |
+| `comment(nodeId?, text)` / `reply(threadId, text, resolve?)` | Talk to the artist inside the document |
+| `render_variations(target, variations or seeds, offer?)` | Several versions in one grid without changing the graph; with `offer` the artist picks one |
+| `apply_text(text, label)` | The whole graph as text (5.4), applied as one step |
 | `export(outputs?, folder?, preset?)` | Writes files + sidecar JSON, returns the paths |
-| `snapshot(name)` | Saves the current outputs for later A/B |
+| `snapshot(name, target?, frame?)` | Saves a picture of one output for later A/B |
 | `finish_working` | Ends presence, clears agent highlights |
 | `generate_image(prompt, size)` (P2) | AI-generated image into a new Image Sample node |
 
