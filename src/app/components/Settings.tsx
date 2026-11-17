@@ -3,6 +3,7 @@ import { generation, useGeneration } from "../../ai/generation"
 import { NumberField, TextField, Toggle } from "../../inspector/fields"
 import { session } from "../session"
 import { HotkeySettings } from "./HotkeySettings"
+import { PreferenceSettings } from "./PreferenceSettings"
 import { Icon } from "./Icon"
 
 let open = false
@@ -16,7 +17,7 @@ export function openSettings(): void {
   setOpen(true)
 }
 
-/** Settings dialog: the setup of AI images, and the hotkeys. */
+/** Settings dialog: the setup of AI images, editor preferences and the hotkeys. */
 export function Settings(): ReactElement | null {
   const shown = useSyncExternalStore(
     (listener) => {
@@ -141,6 +142,7 @@ export function Settings(): ReactElement | null {
               </p>
             </>
           )}
+          <PreferenceSettings />
           <HotkeySettings />
         </div>
       </section>

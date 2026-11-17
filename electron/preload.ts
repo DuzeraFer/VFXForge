@@ -22,6 +22,10 @@ const api = {
   readAsset: (projectPath: string | null, ref: string): Promise<Uint8Array | null> => ipcRenderer.invoke("asset:read", projectPath, ref),
   /** Lets the artist pick an image, copies it into the project and returns its reference. */
   importAsset: (projectPath: string | null): Promise<string | null> => ipcRenderer.invoke("asset:import", projectPath),
+  /** Writes a settings profile where the artist chooses; returns the path, or null when cancelled. */
+  saveProfile: (text: string): Promise<string | null> => ipcRenderer.invoke("profile:save", text),
+  /** The text of a settings profile the artist picks, or null. */
+  openProfile: (): Promise<string | null> => ipcRenderer.invoke("profile:open"),
   /** Lets the artist pick the frames of an image sequence and returns their bytes, in name order. */
   pickSequence: (): Promise<{ name: string; bytes: Uint8Array }[] | null> => ipcRenderer.invoke("asset:pickSequence"),
   /** Stores an RGBA picture made in the window as a PNG of the project and returns its reference. */

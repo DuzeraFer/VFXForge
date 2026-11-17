@@ -94,6 +94,36 @@ export function resetHotkeys(): void {
   commit({})
 }
 
+/** The keys that differ from the defaults. */
+export const hotkeyOverrides = (): Partial<Record<HotkeyAction, string>> => ({ ...custom })
+
+/** Replaces all custom keys at once (a settings profile). Reserved keys and clashes are left out; returns how many. */
+export function loadHotkeys(next: Partial<Record<HotkeyAction, string>>): number {
+  const taken = new Map<string, HotkeyAction>()
+  const kept: Partial<Record<HotkeyAction, string>> = {}
+  let skipped = 0
+  for (const hotkey of HOTKEYS) {
+    const combo = next[hotkey.id]
+    if (combo === undefined || combo === hotkey.combo) continue
+    if (RESERVED.has(combo) || taken.has(combo)) skipped++
+    else {
+      kept[hotkey.id] = combo
+      taken.set(combo, hotkey.id)
+    }
+  }
+  // A custom key may not shadow the default of an action that kept its default.
+  for (const hotkey of HOTKEYS) {
+    if (kept[hotkey.id] !== undefined) continue
+    const owner = taken.get(hotkey.combo)
+    if (owner) {
+      delete kept[owner]
+      skipped++
+    }
+  }
+  commit(kept)
+  return skipped
+}
+
 export const hotkeysChanged = (): boolean => Object.keys(custom).length > 0
 
 /** Re-renders when a hotkey changes. */

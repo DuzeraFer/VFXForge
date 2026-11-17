@@ -22,7 +22,9 @@ import {
 import { resolveGraph } from "../src/engine/validate"
 import { gradientFromSamples, sampleLine, type Rgba } from "../src/inspector/gradient"
 import { sequenceLayout } from "../src/inspector/sequence"
-import { registry } from "../src/nodes"
+import { registry, setProjectFunctions } from "../src/nodes"
+import { applyProfile, cleanPreferences, currentProfile, getPreferences, parseProfile, setPreferences } from "../src/app/preferences"
+import { examples } from "../src/library/examples"
 
 const fire = (): Project => parseProject(readFileSync("src/library/examples/cel_fire.vfxf", "utf8"))
 const human = { kind: "human" } as const
@@ -210,5 +212,59 @@ describe("agent tools for the leftovers", () => {
     expect(names).toContain("sample_gradient")
     const apply = TOOL_SPECS.find((t) => t.name === "apply")!.description
     for (const op of ["add_frame", "remove_frame", "save_gradient", "remove_gradient"]) expect(apply).toContain(`"op": "${op}"`)
+  })
+})
+
+describe("preferences and the settings profile", () => {
+  it("keeps only what it knows", () => {
+    expect(cleanPreferences({ wireStyle: "stepped", other: 1 })).toEqual({ wireStyle: "stepped" })
+    expect(cleanPreferences({ wireStyle: "wavy" })).toEqual({ wireStyle: "curved" })
+    expect(cleanPreferences(null)).toEqual({ wireStyle: "curved" })
+  })
+
+  it("round-trips through a profile file", () => {
+    setPreferences({ wireStyle: "straight" })
+    setHotkey("node.bypass", "Q")
+    const text = JSON.stringify(currentProfile())
+    resetHotkeys()
+    setPreferences({ wireStyle: "curved" })
+    expect(applyProfile(parseProfile(text))).toBe(0)
+    expect(getPreferences().wireStyle).toBe("straight")
+    expect(comboFor("node.bypass")).toBe("Q")
+    resetHotkeys()
+    setPreferences({ wireStyle: "curved" })
+  })
+
+  it("refuses other files, and leaves out hotkeys that cannot work", () => {
+    expect(() => parseProfile("not json")).toThrow(/not a VFXForge settings profile/)
+    expect(() => parseProfile(JSON.stringify({ version: 1, graphs: [] }))).toThrow(/not a VFXForge settings profile/)
+    const profile = parseProfile(JSON.stringify({ vfxforgeProfile: 1, theme: "neon", preferences: { wireStyle: 3 }, hotkeys: { "node.bypass": "Mod+S", "graph.align": "F", "view.fitAll": "Z", "made.up": "X", "tool.pan": 7 } }))
+    expect(profile.theme).toBe("dark")
+    expect(profile.preferences).toEqual({ wireStyle: "curved" })
+    expect(Object.keys(profile.hotkeys).sort()).toEqual(["graph.align", "node.bypass", "view.fitAll"])
+    // Mod+S is reserved; F is the default of "Zoom to selection", which keeps it.
+    expect(applyProfile(profile)).toBe(2)
+    expect(comboFor("node.bypass")).toBe("B")
+    expect(comboFor("graph.align")).toBe("L")
+    expect(comboFor("view.fitAll")).toBe("Z")
+    expect(actionFor(key("f"))).toBe("view.fitSelection")
+    resetHotkeys()
+  })
+
+  it("a profile holds nothing but theme, preferences and hotkeys", () => {
+    expect(Object.keys(currentProfile()).sort()).toEqual(["hotkeys", "preferences", "theme", "vfxforgeProfile"])
+  })
+})
+
+describe("example projects", () => {
+  it("ship four, each valid and without problems", () => {
+    expect(examples.map((e) => e.id)).toEqual(["cel_fire", "slash_swipe", "smoke_dissolve", "ring_and_bolt"])
+    for (const example of examples) {
+      const project = parseProject(example.text)
+      setProjectFunctions(project.graphs)
+      for (const graph of project.graphs) expect(resolveGraph(graph, registry).problems, `${example.id}/${graph.id}`).toEqual([])
+      expect(example.description.length, example.id).toBeGreaterThan(20)
+    }
+    setProjectFunctions([])
   })
 })
