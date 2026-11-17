@@ -22,7 +22,9 @@ export type DocumentStore = {
   getState: () => DocState
   subscribe: (listener: (event: ChangeEvent) => void) => () => void
   /** One atomic, undoable transaction. Throws `BatchError` if any op is invalid. */
-  apply: (ops: readonly Op[], options: { label: string; author?: Author }) => ApplyResult
+  apply: (ops: readonly Op[], options: { label: string; author?: Author; mergeKey?: string }) => ApplyResult
+  /** Moves back or forward until transaction `id` is the latest applied one (0 = before everything). */
+  jumpTo: (id: number) => void
   undo: () => boolean
   redo: () => boolean
   /** Replaces the document (open / new). Clears history. */
@@ -59,6 +61,12 @@ export function createDocumentStore(initial: Project = createProject(), now: () 
     redo() {
       const transaction = state.history.undone.at(-1)
       return set(redo(state), "redo", transaction)
+    },
+    jumpTo(id) {
+      let next = state
+      while (next.history.done.length > 0 && next.history.done.at(-1)!.id > id) next = undo(next)
+      while (next.history.undone.length > 0 && next.history.undone.at(-1)!.id <= id) next = redo(next)
+      set(next, next.history.done.length < state.history.done.length ? "undo" : "redo")
     },
     load(project) {
       set({ project, history: EMPTY_HISTORY }, "load")

@@ -24,6 +24,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
     "@webgpu/types": "^0.1.74",
+    "@xyflow/react": "^13.0.1",
     "electron": "^45.3.3",
     "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",

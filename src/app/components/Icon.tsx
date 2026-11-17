@@ -34,6 +34,19 @@ const PATHS = {
   next: <path d="M5 3.5v9L11 8zM11.5 3.5v9" />,
   play: <path d="M5 3l8 5-8 5z" />,
   tile: <path d="M2.5 2.5h11v11h-11zM8 2.5v11M2.5 8h11" />,
+  pin: <path d="M6 2.5h4l-.5 4 2 2.5h-7l2-2.5zM8 9v4.5" />,
+  plus: <path d="M8 3v10M3 8h10" />,
+  pause: <path d="M5.5 3.5v9M10.5 3.5v9" />,
+  dice: (
+    <>
+      <path d="M3 3h10v10H3z" />
+      <circle cx="6" cy="6" r="0.5" />
+      <circle cx="10" cy="10" r="0.5" />
+      <circle cx="8" cy="8" r="0.5" />
+    </>
+  ),
+  trash: <path d="M3.5 4.5h9M6.5 4.5v-2h3v2M5 4.5l.5 8.5h5l.5-8.5" />,
+  link: <path d="M7 9a2.5 2.5 0 003.5 0l2-2A2.5 2.5 0 009 3.5l-.8.8M9 7a2.5 2.5 0 00-3.500 0l-2 2A2.500 2.500 0 007 12.500l.8-.8" />,
   more: (
     <>
       <circle cx="3.5" cy="8" r="0.6" />

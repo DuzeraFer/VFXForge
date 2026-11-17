@@ -1,20 +1,37 @@
-/* Visual tokens from docs/02-design-language.md §2.4.
-   Light is the default theme. Two accents only: blue = selection,
-   clay = "the agent did or is doing this". */
+/* Visual tokens. Dark ("Bench") is the default theme; light is kept as an
+   option. Two accents only: blue = selection, clay = "the agent did or is
+   doing this". */
 
 :root {
-  --color-ink: #0d0d0c;
-  --color-ink-muted: #6b6966;
-  --color-ink-faint: #a3a09b;
-  --color-canvas: #f3f2ef;
-  --color-surface: #ffffff;
-  --color-surface-sunk: #f7f6f4;
-  --color-hairline: #e4e2dd;
-  --color-hairline-strong: #cfccc6;
-  --color-select: #2f6bd8;
-  --color-agent: #b4643c;
-  --color-danger: #b33a2e;
-  --color-ok: #3f7a4f;
+  --color-ink: #ecebe8;
+  --color-ink-muted: #9a9792;
+  --color-ink-faint: #73716d;
+  --color-canvas: #1b1b1a;
+  --color-grid: #2c2c2a;
+  --color-surface: #232322;
+  --color-surface-sunk: #1f1f1e;
+  --color-field: #2c2c2a;
+  --color-raised: #2e2e2c;
+  --color-raised-strong: #3a3a37;
+  --color-hairline: #343432;
+  --color-hairline-strong: #4a4a47;
+  --color-select: #5b8ef0;
+  --color-agent: #d08257;
+  --color-agent-surface: #3a2a20;
+  --color-agent-ink: #eaa57d;
+  --color-danger: #d9695e;
+  --color-ok: #6fae80;
+  --color-on-select: #ffffff;
+
+  /* Wire and socket colors by data type. */
+  --color-type-gray: #9a9792;
+  --color-type-color: #c9a45c;
+  --color-type-value: #6fae80;
+  --color-type-image: #b9b6b0;
+
+  /* Image areas keep their own dark backdrop in both themes. */
+  --color-stage: #1d1a21;
+  --color-thumb: #111111;
 
   --font-ui: "Inter Variable", "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
@@ -25,13 +42,13 @@
   --text-ui-size: 12px;
   --text-ui-line: 16px;
   --text-ui-weight: 450;
-  --text-field-size: 12px;
+  --text-field-size: 11px;
   --text-title-size: 13px;
   --text-title-weight: 600;
 
   --radius-field: 4px;
   --radius-node: 6px;
-  --radius-button: 2px;
+  --radius-button: 4px;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -43,30 +60,42 @@
   --hairline: 1px solid var(--color-hairline);
 
   /* The one shadow allowed in the chrome: floating menus. */
-  --shadow-float: 0 4px 16px rgba(13, 13, 12, 0.12);
-
-  /* Layout */
-  --titlebar-height: 36px;
-  --toolstrip-width: 40px;
-
-  color-scheme: light;
-}
-
-:root[data-theme="dark"] {
-  --color-ink: #ecebe8;
-  --color-ink-muted: #9a9792;
-  --color-ink-faint: #6b6966;
-  --color-canvas: #1b1b1a;
-  --color-surface: #232322;
-  --color-surface-sunk: #1f1f1e;
-  --color-hairline: #343432;
-  --color-hairline-strong: #4a4a47;
-  --color-select: #5b8ef0;
-  --color-agent: #d08257;
-  --color-danger: #d9695e;
-  --color-ok: #6fae80;
-
   --shadow-float: 0 4px 16px rgba(0, 0, 0, 0.4);
 
+  /* Layout */
+  --titlebar-height: 40px;
+  --toolstrip-width: 40px;
+  --timeline-height: 40px;
+
   color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --color-ink: #0d0d0c;
+  --color-ink-muted: #6b6966;
+  --color-ink-faint: #a3a09b;
+  --color-canvas: #f3f2ef;
+  --color-grid: #d9d6d0;
+  --color-surface: #ffffff;
+  --color-surface-sunk: #f7f6f4;
+  --color-field: #f1f0ed;
+  --color-raised: #eeedea;
+  --color-raised-strong: #ffffff;
+  --color-hairline: #e4e2dd;
+  --color-hairline-strong: #cfccc6;
+  --color-select: #2f6bd8;
+  --color-agent: #b4643c;
+  --color-agent-surface: #f6e7de;
+  --color-agent-ink: #8f4a28;
+  --color-danger: #b33a2e;
+  --color-ok: #3f7a4f;
+
+  --color-type-gray: #8a8782;
+  --color-type-color: #b08a3c;
+  --color-type-value: #3f7a4f;
+  --color-type-image: #6b6966;
+
+  --shadow-float: 0 4px 16px rgba(13, 13, 12, 0.12);
+
+  color-scheme: light;
 }

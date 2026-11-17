@@ -13,6 +13,8 @@ export type Transaction = {
   timestamp: string
   ops: Op[]
   inverse: Op[]
+  /** Set while a gesture (a slider drag) is still adding to this transaction. */
+  mergeKey?: string
 }
 
 export type History = {
@@ -33,6 +35,11 @@ export const HISTORY_LIMIT = 500
 export type CommitOptions = {
   label: string
   author?: Author
+  /**
+   * Edits of one gesture share a key: while the latest transaction has the
+   * same key, new ops are folded into it, so a slider drag is one undo step.
+   */
+  mergeKey?: string
   /** Injected so tests and replays are deterministic. */
   now?: () => Date
 }
@@ -50,16 +57,28 @@ export function commit(state: DocState, ops: readonly Op[], options: CommitOptio
   const result = applyOps(state.project, ops, applyOptions)
   if (result.project === state.project) return { state, transaction: null, created: result.created }
 
+  const ids = (list: readonly Op[]): Op[] =>
+    list.map((op, i) => ((op.op === "add_node" || op.op === "add_graph") && op.id === undefined ? { ...op, id: result.created[i] } : op))
+
+  const last = state.history.done.at(-1)
+  if (options.mergeKey && last?.mergeKey === options.mergeKey && state.history.undone.length === 0) {
+    const merged: Transaction = { ...last, ops: [...last.ops, ...ids(ops)], inverse: [...result.inverse, ...last.inverse] }
+    return {
+      state: { project: result.project, history: { ...state.history, done: [...state.history.done.slice(0, -1), merged] } },
+      transaction: merged,
+      created: result.created
+    }
+  }
+
   const transaction: Transaction = {
     id: state.history.nextId,
     label: options.label,
     author,
     timestamp: (options.now?.() ?? new Date()).toISOString(),
     // Generated ids are written back into the ops so that redo is exact.
-    ops: ops.map((op, i) =>
-      (op.op === "add_node" || op.op === "add_graph") && op.id === undefined ? { ...op, id: result.created[i] } : op
-    ),
-    inverse: result.inverse
+    ops: ids(ops),
+    inverse: result.inverse,
+    ...(options.mergeKey ? { mergeKey: options.mergeKey } : {})
   }
   const done = [...state.history.done, transaction]
   if (done.length > HISTORY_LIMIT) done.splice(0, done.length - HISTORY_LIMIT)

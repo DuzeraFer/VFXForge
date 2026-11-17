@@ -16,43 +16,36 @@ export function TitleBar({ tabs, activeTab, onSelectTab, theme, onToggleTheme }:
   return (
     <header className="titlebar">
       <div className="titlebar-brand">
-        <Icon name="logo" />
+        <span className="brand-mark" aria-hidden="true" />
         <span>VFXForge</span>
       </div>
 
       <div className="tabs" role="tablist" aria-label="Open documents">
         {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            role="tab"
-            aria-selected={tab.id === activeTab}
-            className="tab"
-            onClick={() => onSelectTab(tab.id)}
-          >
-            <Icon name={tab.kind === "home" ? "home" : "doc"} size={14} />
-            <span>{tab.title}</span>
+          <button key={tab.id} role="tab" aria-selected={tab.id === activeTab} className="tab" onClick={() => onSelectTab(tab.id)}>
+            {tab.title}
           </button>
         ))}
       </div>
 
       <div className="titlebar-drag" />
 
-      <div className="presence" aria-label="Who is in this document">
+      <div className="titlebar-actions">
+        <button
+          className="icon-button"
+          onClick={onToggleTheme}
+          title={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
+          aria-label="Toggle theme"
+        >
+          <Icon name={theme === "light" ? "moon" : "sun"} />
+        </button>
         <span className="avatar" title="You">
           Y
         </span>
-        <span className="avatar avatar-agent" title="Claude — not connected">
-          C
-        </span>
+        <button className="button-primary" disabled title="Export arrives in Phase 5">
+          Export
+        </button>
       </div>
-      <button
-        className="icon-button"
-        onClick={onToggleTheme}
-        title={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
-        aria-label="Toggle theme"
-      >
-        <Icon name={theme === "light" ? "moon" : "sun"} />
-      </button>
       {/* Space for the native window buttons drawn by Electron's title bar overlay. */}
       {window.vfxforge && window.vfxforge.platform !== "darwin" && <div className="titlebar-controls-gap" />}
     </header>

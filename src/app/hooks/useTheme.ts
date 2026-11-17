@@ -6,13 +6,13 @@ const STORAGE_KEY = "vfxforge.theme"
 
 function readStoredTheme(): ThemeName {
   try {
-    return localStorage.getItem(STORAGE_KEY) === "dark" ? "dark" : "light"
+    return localStorage.getItem(STORAGE_KEY) === "light" ? "light" : "dark"
   } catch {
-    return "light"
+    return "dark"
   }
 }
 
-/** Light is the default (docs/02 §2.4). The choice is remembered per machine. */
+/** Dark is the default. The choice is remembered per machine. */
 export function useTheme(): { theme: ThemeName; toggleTheme: () => void } {
   const [theme, setTheme] = useState<ThemeName>(readStoredTheme)
 

@@ -30,7 +30,7 @@ const TITLE_BAR: Record<ThemeName, { color: string; symbolColor: string }> = {
   dark: { color: "#232322", symbolColor: "#ecebe8" }
 }
 
-const TITLE_BAR_HEIGHT = 36
+const TITLE_BAR_HEIGHT = 40
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -39,9 +39,9 @@ function createWindow(): void {
     minWidth: 960,
     minHeight: 600,
     show: false,
-    backgroundColor: TITLE_BAR.light.color,
+    backgroundColor: TITLE_BAR.dark.color,
     titleBarStyle: "hidden",
-    titleBarOverlay: { ...TITLE_BAR.light, height: TITLE_BAR_HEIGHT },
+    titleBarOverlay: { ...TITLE_BAR.dark, height: TITLE_BAR_HEIGHT },
     webPreferences: {
       preload: join(__dirname, "../preload/preload.js"),
       contextIsolation: true,

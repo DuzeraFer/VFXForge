@@ -12,6 +12,7 @@ Common to every image node: `resolution`, `bitDepth`, `tiling`, `seed` (if rando
 | Uniform Color | C/G | color | V SD | P0 |
 | Value | V | float / float2 / float3 / float4 / int / bool | SD | P0 |
 | Image Sample | C | file (PNG JPG BMP GIF TIFF TGA), fit mode, linear/sRGB | V SD | P0 |
+| AI Image | C, G (mask) | prompt, background (transparent / opaque), alpha (from image / from luminance), size, quality; generated on request, result stored with the project (06 §6.11) | new | P0 |
 | Image Sequence | C (animated) | folder or pattern, frame offset, loop | V N | P1 |
 | SVG | G | file, fill/stroke, size | SD | P2 |
 | Text | G | string, font, size, alignment | SD | P2 |

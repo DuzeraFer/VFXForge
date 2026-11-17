@@ -3,13 +3,17 @@ import { Engine } from "../engine/evaluator"
 import { registry } from "../nodes"
 import { deviceLostFailure, initGpu, type GpuContext, type GpuFailure } from "../engine/gpu"
 import { PreviewPane } from "../preview/PreviewPane"
-import { CanvasArea } from "./components/CanvasArea"
+import { GraphCanvas } from "../canvas/GraphCanvas"
+import { EditorContext } from "../canvas/context"
+import { resolveGraph } from "../engine/validate"
+import { Inspector } from "../inspector/Inspector"
+import { Thumbnails } from "../preview/thumbnails"
+import { playback } from "./playback"
 import { GpuErrorScreen } from "./components/GpuErrorScreen"
-import { Inspector } from "./components/Inspector"
 import { LeftPanel } from "./components/LeftPanel"
 import { Timeline } from "./components/Timeline"
 import { TitleBar, type Tab } from "./components/TitleBar"
-import { ToolStrip } from "./components/ToolStrip"
+import { ToolStrip, type ToolId } from "./components/ToolStrip"
 import { useDrag } from "./hooks/useDrag"
 import { useTheme } from "./hooks/useTheme"
 import { Toast } from "./components/Toast"
@@ -26,7 +30,9 @@ export function App(): ReactElement {
     { id: "home", title: "Home", kind: "home" },
     { id: "document", title: `${documentTitle(doc)}${doc.dirty ? " •" : ""}`, kind: "graph" }
   ]
-  const activeGraph = doc.project.graphs.find((g) => g.id === doc.activeGraphId) ?? null
+  const activeGraph = doc.activeGraph
+  const [tool, setTool] = useState<ToolId>("select")
+  const resolved = useMemo(() => (activeGraph ? resolveGraph(activeGraph, registry) : null), [activeGraph])
 
   useEffect(
     () =>
@@ -75,6 +81,36 @@ export function App(): ReactElement {
   const gpu = gpuState.status === "ready" ? gpuState.gpu : null
   const engine = useMemo(() => (gpu ? new Engine(gpu, registry) : null), [gpu])
   useEffect(() => () => engine?.dispose(), [engine])
+  const thumbnails = useMemo(() => (gpu && engine ? new Thumbnails(gpu, engine) : null), [gpu, engine])
+  useEffect(() => () => thumbnails?.destroy(), [thumbnails])
+  const editor = useMemo(() => ({ resolved, thumbnails }), [resolved, thumbnails])
+
+  const frames = activeGraph?.settings.frames ?? 1
+  const fps = activeGraph?.settings.fps ?? 12
+  useEffect(() => playback.configure(frames, fps), [frames, fps])
+  // Thumbnails follow the playhead without re-rendering the app every frame.
+  useEffect(() => {
+    if (!thumbnails) return
+    const sync = (): void => thumbnails.setContext(activeGraph, doc.project.seed, playback.getState().frame)
+    sync()
+    return playback.subscribe(sync)
+  }, [thumbnails, activeGraph, doc.project.seed])
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      const el = document.activeElement as HTMLElement | null
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT")) return
+      if (event.ctrlKey || event.metaKey || event.altKey) return
+      const key = event.key.toLowerCase()
+      if (key === "v") setTool("select")
+      else if (key === "h") setTool("pan")
+      else if (key === "k") playback.setPlaying(!playback.getState().playing)
+      else if (key === ",") playback.step(-1)
+      else if (key === ".") playback.step(1)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
 
   const dragLeft = useDrag(
     useCallback(() => {
@@ -104,29 +140,41 @@ export function App(): ReactElement {
       {gpuState.status === "failed" ? (
         <GpuErrorScreen failure={gpuState.failure} onRetry={() => setGpuAttempt((n) => n + 1)} />
       ) : (
-        <>
+        <EditorContext.Provider value={editor}>
           <div className="workspace" style={{ gridTemplateColumns: `${leftWidth}px var(--toolstrip-width) 1fr ${rightWidth}px` }}>
             <div className="left-wrap">
-              <LeftPanel graphs={doc.project.graphs} activeGraphId={doc.activeGraphId} onSelectGraph={(id) => session.setActiveGraph(id)} />
+              <LeftPanel graphs={doc.project.graphs} activeGraphId={doc.activeGraphId} history={doc.history} />
               <div className="resize-handle resize-handle-x resize-handle-right" onPointerDown={dragLeft} />
             </div>
-            <ToolStrip />
-            <CanvasArea graph={activeGraph} />
+            <ToolStrip tool={tool} onTool={setTool} />
+            {activeGraph && resolved ? (
+              <GraphCanvas graph={activeGraph} resolved={resolved} selection={doc.selection} pinnedNodeId={doc.pinnedNodeId} tool={tool} />
+            ) : (
+              <div className="graph-canvas" />
+            )}
             <div
               className="right-column"
               style={{ gridTemplateRows: `${(previewSplit * 100).toFixed(2)}% minmax(0, 1fr)` }}
             >
               <div className="resize-handle resize-handle-x resize-handle-left" onPointerDown={dragRight} />
               <div className="preview-wrap">
-                <PreviewPane gpu={gpu} engine={engine} graph={activeGraph} projectSeed={doc.project.seed} />
+                <PreviewPane
+                  gpu={gpu}
+                  engine={engine}
+                  graph={activeGraph}
+                  resolved={resolved}
+                  projectSeed={doc.project.seed}
+                  selection={doc.selection}
+                  pinnedNodeId={doc.pinnedNodeId}
+                />
                 <div className="resize-handle resize-handle-y" onPointerDown={dragSplit} />
               </div>
-              <Inspector />
+              <Inspector project={doc.project} graph={activeGraph} selection={doc.selection} problems={resolved?.problems ?? []} />
             </div>
           </div>
-          <Timeline open={timelineOpen} onToggle={() => setTimelineOpen((v) => !v)} />
+          <Timeline open={timelineOpen} onToggle={() => setTimelineOpen((v) => !v)} settings={activeGraph?.settings ?? null} />
           <Toast notice={doc.notice} />
-        </>
+        </EditorContext.Provider>
       )}
     </div>
   )
