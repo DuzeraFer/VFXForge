@@ -9,6 +9,8 @@ import { resolveGraph } from "../engine/validate"
 import { Inspector } from "../inspector/Inspector"
 import { Thumbnails } from "../preview/thumbnails"
 import { playback } from "./playback"
+import { serveAgents } from "../agent/bridge"
+import { setAgentEngine } from "../agent/host"
 import { GpuErrorScreen } from "./components/GpuErrorScreen"
 import { LeftPanel } from "./components/LeftPanel"
 import { Timeline } from "./components/Timeline"
@@ -32,6 +34,7 @@ export function App(): ReactElement {
   ]
   const activeGraph = doc.activeGraph
   const [tool, setTool] = useState<ToolId>("select")
+  const agentNames = useMemo(() => doc.agent.working.map((a) => a.name), [doc.agent.working])
   const resolved = useMemo(() => (activeGraph ? resolveGraph(activeGraph, registry) : null), [activeGraph])
 
   useEffect(
@@ -81,6 +84,12 @@ export function App(): ReactElement {
   const gpu = gpuState.status === "ready" ? gpuState.gpu : null
   const engine = useMemo(() => (gpu ? new Engine(gpu, registry) : null), [gpu])
   useEffect(() => () => engine?.dispose(), [engine])
+  useEffect(() => {
+    setAgentEngine(engine)
+    // Agents are served once there is something to render with (or it is clear there never will be).
+    if (gpuState.status !== "starting") serveAgents()
+    return () => setAgentEngine(null)
+  }, [engine, gpuState.status])
   const thumbnails = useMemo(() => (gpu && engine ? new Thumbnails(gpu, engine) : null), [gpu, engine])
   useEffect(() => () => thumbnails?.destroy(), [thumbnails])
   const editor = useMemo(() => ({ resolved, thumbnails }), [resolved, thumbnails])
@@ -135,7 +144,7 @@ export function App(): ReactElement {
 
   return (
     <div className="app">
-      <TitleBar tabs={tabs} activeTab={activeTab} onSelectTab={setActiveTab} theme={theme} onToggleTheme={toggleTheme} />
+      <TitleBar tabs={tabs} activeTab={activeTab} onSelectTab={setActiveTab} theme={theme} onToggleTheme={toggleTheme} agents={agentNames} />
 
       {gpuState.status === "failed" ? (
         <GpuErrorScreen failure={gpuState.failure} onRetry={() => setGpuAttempt((n) => n + 1)} />
@@ -143,12 +152,12 @@ export function App(): ReactElement {
         <EditorContext.Provider value={editor}>
           <div className="workspace" style={{ gridTemplateColumns: `${leftWidth}px var(--toolstrip-width) 1fr ${rightWidth}px` }}>
             <div className="left-wrap">
-              <LeftPanel graphs={doc.project.graphs} activeGraphId={doc.activeGraphId} history={doc.history} />
+              <LeftPanel graphs={doc.project.graphs} activeGraphId={doc.activeGraphId} history={doc.history} activity={doc.agent.log} />
               <div className="resize-handle resize-handle-x resize-handle-right" onPointerDown={dragLeft} />
             </div>
             <ToolStrip tool={tool} onTool={setTool} />
             {activeGraph && resolved ? (
-              <GraphCanvas graph={activeGraph} resolved={resolved} selection={doc.selection} pinnedNodeId={doc.pinnedNodeId} tool={tool} />
+              <GraphCanvas graph={activeGraph} resolved={resolved} selection={doc.selection} pinnedNodeId={doc.pinnedNodeId} tool={tool} agent={doc.agent} />
             ) : (
               <div className="graph-canvas" />
             )}

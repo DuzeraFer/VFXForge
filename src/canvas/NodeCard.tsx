@@ -14,6 +14,10 @@ export type CardData = {
   def: ResolvedNodeDef | undefined
   problems: Problem[]
   pinned: boolean
+  /** Name of the agent that changed this node and is still working. */
+  agent?: string
+  /** Position in the agent's latest edit, for the staggered fade-in; -1 otherwise. */
+  freshIndex: number
   /** Resolved type of each output, by output name. */
   outputTypes: Record<string, DataType | undefined>
 }
@@ -57,7 +61,7 @@ function summaryOf(node: Node, def: ResolvedNodeDef | undefined): { text: string
 }
 
 function NodeCardView({ id, data, selected }: NodeProps<CardNode>): ReactElement {
-  const { node, def, problems, pinned, outputTypes } = data
+  const { node, def, problems, pinned, outputTypes, agent, freshIndex } = data
   const [showParams, setShowParams] = useState(false)
   const updateInternals = useUpdateNodeInternals()
 
@@ -84,8 +88,12 @@ function NodeCardView({ id, data, selected }: NodeProps<CardNode>): ReactElement
       data-error={problems.some((p) => p.code !== "missing_input") || undefined}
       data-bypass={node.bypass || undefined}
       data-pinned={pinned || undefined}
+      data-agent={agent ? "" : undefined}
+      data-fresh={freshIndex >= 0 ? "" : undefined}
+      style={freshIndex >= 0 ? { animationDelay: `${freshIndex * 80}ms` } : undefined}
       title={problems.map((p) => p.message).join("\n") || undefined}
     >
+      {agent && <span className="node-agent-tag">{agent}</span>}
       <header className="node-header">
         <span className="node-title">{nodeTitle(node)}</span>
         {problems.length > 0 && <span className="node-error-dot" aria-label="Error" />}

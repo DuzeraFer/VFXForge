@@ -161,6 +161,10 @@
   font-size: 11px;
   color: var(--color-ink-muted);
 }
+.chip-button:hover {
+  border-color: var(--color-hairline-strong);
+  color: var(--color-ink);
+}
 .chip-on {
   border-color: var(--color-select);
   color: var(--color-select);
@@ -1240,6 +1244,124 @@ kbd,
   background: var(--color-select);
 }
 
+/* ── Agent presence (clay = "the agent did or is doing this") ── */
+
+.agent-pill,
+.canvas-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px 0 3px;
+  border-radius: 12px;
+  background: var(--color-agent-surface);
+  color: var(--color-agent-ink);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.agent-dot {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-agent);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 600;
+}
+.agent-dot-small {
+  width: 14px;
+  height: 14px;
+  font-size: 8px;
+}
+
+.canvas-pill {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  z-index: 5;
+  max-width: calc(100% - 32px);
+  height: 30px;
+  padding: 0 6px 0 6px;
+  border-radius: 15px;
+  box-shadow: var(--shadow-float);
+  transform: translateX(-50%);
+}
+.canvas-pill > span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.canvas-pill .text-button {
+  color: var(--color-agent-ink);
+  font-weight: 600;
+}
+.canvas-pill .text-button:hover {
+  background: color-mix(in srgb, var(--color-agent) 25%, transparent);
+  color: var(--color-agent-ink);
+}
+
+.node-card[data-agent] {
+  border-color: var(--color-agent);
+  box-shadow: 0 0 0 0.5px var(--color-agent);
+}
+.node-card[data-agent][data-selected] {
+  border-color: var(--color-select);
+  box-shadow: 0 0 0 0.5px var(--color-select);
+}
+.node-agent-tag {
+  position: absolute;
+  left: -1px;
+  top: -15px;
+  padding: 0 5px;
+  border-radius: 3px 3px 0 0;
+  background: var(--color-agent);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 14px;
+}
+.node-card[data-fresh] {
+  animation: node-arrive 240ms ease-out backwards;
+}
+@keyframes node-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .node-card[data-fresh] {
+    animation: none;
+  }
+}
+
+.activity-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+}
+.activity-row[data-reverted] .activity-text {
+  color: var(--color-ink-faint);
+  text-decoration: line-through;
+}
+.activity-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-ink-muted);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.activity-text:hover:not(:disabled) {
+  color: var(--color-ink);
+}
+
 /* ── GPU error screen ──────────────────────────────────── */
 
 .gpu-error {
@@ -1295,8 +1417,9 @@ kbd,
   left: 50%;
   bottom: 56px;
   transform: translateX(-50%);
-  max-width: 480px;
+  max-width: 640px;
   padding: 6px var(--space-3);
+  user-select: text;
   border-radius: var(--radius-field);
   background: var(--color-ink);
   color: var(--color-surface);

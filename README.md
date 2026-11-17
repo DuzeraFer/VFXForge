@@ -6,7 +6,23 @@ The full spec lives in [`docs/`](docs/README.md). Build order and acceptance che
 
 ## Status
 
-**Phase 2 — Editor.** The node canvas, library, schema-driven inspector, gradient editor, Preview controls, timeline and history panel are in, in the dark "Bench" design (a light theme is one click away). A graph can be built by hand from an empty project. The agent link (MCP) comes in Phase 3.
+**Phase 3 — Agent link.** Claude can now build and edit graphs in the running app through MCP while you watch: its nodes arrive with a clay outline, every step is one entry in the activity log, and each can be undone on its own. The editor from Phase 2 (canvas, inspector, gradient editor, Preview, timeline, history) is in the dark "Bench" design. Next: the AI Image node (Phase 3b), then animation and sprite sheets.
+
+## Connect Claude
+
+With VFXForge open, click **Connect Claude** in the title bar. It copies one command; run it once in a terminal:
+
+```
+claude mcp add vfxforge -- "C:\path\to\VFXForge.exe" mcp
+```
+
+Then ask Claude Code something like "build a cel-shaded fire in VFXForge". The app listens only on this computer, and only for clients that hold the token in its settings folder (`mcp.json`).
+
+- If the app is open, Claude edits the graph you are looking at.
+- If it is not, the same command works without a window: `VFXForge.exe mcp project.vfxf` opens that project, and `save_project` writes it back.
+- Clients that speak HTTP can connect to the `url` in `mcp.json` with the header `Authorization: Bearer <token>`.
+
+Tools: `get_guide`, `get_basic_info`, `get_selection`, `get_graph`, `get_node`, `list_node_types`, `get_history`, `render`, `render_frames`, `measure`, `apply`, `create_graph`, `set_selection`, `save_project`, `finish_working`. See `docs/05-ai-integration.md`.
 
 ![Cel fire sheet rendered by the engine](docs/progress/phase-1-cel-fire.png)
 
