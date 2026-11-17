@@ -8,5 +8,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["electron/**/*.ts", "src/headless/jobs.ts", "electron.vite.config.ts", "vitest.config.mts"]
+  "include": ["electron/**/*.ts", "tests/files.test.ts", "src/headless/jobs.ts", "electron.vite.config.ts", "vitest.config.mts"]
 }

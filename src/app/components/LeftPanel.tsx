@@ -1,4 +1,5 @@
 import { useState, type ReactElement, type ReactNode } from "react"
+import type { Graph } from "../../doc/types"
 import { Icon } from "./Icon"
 
 /** Library categories from docs/04-node-library.md. Nodes arrive in Phase 1. */
@@ -31,12 +32,30 @@ function Section({ title, children }: { title: string; children: ReactNode }): R
   )
 }
 
-export function LeftPanel(): ReactElement {
+type Props = { graphs: Graph[]; activeGraphId: string | null; onSelectGraph: (id: string) => void }
+
+export function LeftPanel({ graphs, activeGraphId, onSelectGraph }: Props): ReactElement {
   return (
     <aside className="left-panel">
       <div className="left-panel-scroll">
         <Section title="Graphs">
-          <p className="empty-note">No graphs yet.</p>
+          {graphs.length === 0 ? (
+            <p className="empty-note">No graphs yet.</p>
+          ) : (
+            <ul className="row-list">
+              {graphs.map((graph) => (
+                <li key={graph.id}>
+                  <button className="row row-button" aria-current={graph.id === activeGraphId} onClick={() => onSelectGraph(graph.id)}>
+                    <span className="row-title">{graph.name}</span>
+                    <span className="row-meta">
+                      {graph.settings.width}×{graph.settings.height}
+                      {graph.settings.frames > 1 ? ` · ${graph.settings.frames}f` : ""}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </Section>
 
         <Section title="Library">
@@ -57,7 +76,7 @@ export function LeftPanel(): ReactElement {
           <p className="empty-note">No reference images.</p>
         </Section>
       </div>
-      <footer className="left-panel-footer">VFXForge 0.0.1 · Phase 0</footer>
+      <footer className="left-panel-footer">VFXForge 0.0.1 · Phase 1</footer>
     </aside>
   )
 }

@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState, type ReactElement } from "react"
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react"
+import { Engine } from "../engine/evaluator"
+import { registry } from "../nodes"
 import { deviceLostFailure, initGpu, type GpuContext, type GpuFailure } from "../engine/gpu"
 import { PreviewPane } from "../preview/PreviewPane"
 import { CanvasArea } from "./components/CanvasArea"
@@ -10,18 +12,34 @@ import { TitleBar, type Tab } from "./components/TitleBar"
 import { ToolStrip } from "./components/ToolStrip"
 import { useDrag } from "./hooks/useDrag"
 import { useTheme } from "./hooks/useTheme"
+import { Toast } from "./components/Toast"
+import { documentTitle, session, useSession } from "./session"
 import { clamp, LEFT_PANEL, PREVIEW_SPLIT, resizeBy, RIGHT_COLUMN } from "./layout"
-
-const TABS: Tab[] = [
-  { id: "home", title: "Home", kind: "home" },
-  { id: "untitled", title: "Untitled", kind: "graph" }
-]
 
 type GpuState = { status: "starting" } | { status: "ready"; gpu: GpuContext } | { status: "failed"; failure: GpuFailure }
 
 export function App(): ReactElement {
   const { theme, toggleTheme } = useTheme()
-  const [activeTab, setActiveTab] = useState("untitled")
+  const doc = useSession()
+  const [activeTab, setActiveTab] = useState("document")
+  const tabs: Tab[] = [
+    { id: "home", title: "Home", kind: "home" },
+    { id: "document", title: `${documentTitle(doc)}${doc.dirty ? " •" : ""}`, kind: "graph" }
+  ]
+  const activeGraph = doc.project.graphs.find((g) => g.id === doc.activeGraphId) ?? null
+
+  useEffect(
+    () =>
+      window.vfxforge?.onMenuCommand((command) => {
+        if (command === "new") session.newProject()
+        else if (command === "open") void session.open()
+        else if (command === "save") void session.save()
+        else if (command === "saveAs") void session.save(true)
+        else if (command === "undo") session.undo()
+        else session.redo()
+      }),
+    []
+  )
   const [leftWidth, setLeftWidth] = useState<number>(LEFT_PANEL.initial)
   const [rightWidth, setRightWidth] = useState<number>(RIGHT_COLUMN.initial)
   const [previewSplit, setPreviewSplit] = useState<number>(PREVIEW_SPLIT.initial)
@@ -54,6 +72,10 @@ export function App(): ReactElement {
     }
   }, [gpuAttempt])
 
+  const gpu = gpuState.status === "ready" ? gpuState.gpu : null
+  const engine = useMemo(() => (gpu ? new Engine(gpu, registry) : null), [gpu])
+  useEffect(() => () => engine?.dispose(), [engine])
+
   const dragLeft = useDrag(
     useCallback(() => {
       const start = leftWidth
@@ -77,7 +99,7 @@ export function App(): ReactElement {
 
   return (
     <div className="app">
-      <TitleBar tabs={TABS} activeTab={activeTab} onSelectTab={setActiveTab} theme={theme} onToggleTheme={toggleTheme} />
+      <TitleBar tabs={tabs} activeTab={activeTab} onSelectTab={setActiveTab} theme={theme} onToggleTheme={toggleTheme} />
 
       {gpuState.status === "failed" ? (
         <GpuErrorScreen failure={gpuState.failure} onRetry={() => setGpuAttempt((n) => n + 1)} />
@@ -85,24 +107,25 @@ export function App(): ReactElement {
         <>
           <div className="workspace" style={{ gridTemplateColumns: `${leftWidth}px var(--toolstrip-width) 1fr ${rightWidth}px` }}>
             <div className="left-wrap">
-              <LeftPanel />
+              <LeftPanel graphs={doc.project.graphs} activeGraphId={doc.activeGraphId} onSelectGraph={(id) => session.setActiveGraph(id)} />
               <div className="resize-handle resize-handle-x resize-handle-right" onPointerDown={dragLeft} />
             </div>
             <ToolStrip />
-            <CanvasArea />
+            <CanvasArea graph={activeGraph} />
             <div
               className="right-column"
               style={{ gridTemplateRows: `${(previewSplit * 100).toFixed(2)}% minmax(0, 1fr)` }}
             >
               <div className="resize-handle resize-handle-x resize-handle-left" onPointerDown={dragRight} />
               <div className="preview-wrap">
-                <PreviewPane gpu={gpuState.status === "ready" ? gpuState.gpu : null} />
+                <PreviewPane gpu={gpu} engine={engine} graph={activeGraph} projectSeed={doc.project.seed} />
                 <div className="resize-handle resize-handle-y" onPointerDown={dragSplit} />
               </div>
               <Inspector />
             </div>
           </div>
           <Timeline open={timelineOpen} onToggle={() => setTimelineOpen((v) => !v)} />
+          <Toast notice={doc.notice} />
         </>
       )}
     </div>

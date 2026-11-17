@@ -6,9 +6,9 @@ The full spec lives in [`docs/`](docs/README.md). Build order and acceptance che
 
 ## Status
 
-**Phase 0 — Skeleton.** The app opens, shows the empty shell layout in light and dark themes, and draws a WGSL test pattern in Preview through WebGPU.
+**Phase 1 — Document and engine core.** The document model, the GPU graph engine and the first 21 nodes are in. The app opens a `.vfxf` project and plays its Output in Preview. The node canvas and inspector come in Phase 2.
 
-![Phase 0 shell](docs/progress/phase-0-light.png)
+![Cel fire sheet rendered by the engine](docs/progress/phase-1-cel-fire.png)
 
 ## Develop
 
@@ -18,10 +18,28 @@ Requires Node 22+.
 npm install
 npm run dev        # run the app with hot reload
 npm run typecheck
-npm test
-npm run build      # bundle main, preload and renderer into out/
-npm run dist       # Windows portable .exe into release/ (run on Windows)
+npm test                 # unit tests
+npm run test:golden      # renders every golden case headless and compares with tests/golden/expected
+npm run build            # bundle main, preload and renderer into out/
+npm run dist             # Windows portable .exe into release/ (run on Windows)
 ```
+
+Open a project at startup by passing its path, for example `npm run preview -- src/library/examples/cel_fire.vfxf`.
+
+### Headless rendering
+
+The same engine runs without a window:
+
+```
+npx electron . render src/library/examples/cel_fire.vfxf --frame sheet --bg 2a1f2b --out renders
+npx electron . golden tests/golden [--update]
+```
+
+On a machine without a GPU, set `VFXFORGE_SOFTWARE_GPU=1` (and on Linux run under `xvfb-run`).
+
+### Adding a node
+
+Add one file in `src/nodes/` that default-exports `defineNode({...})`: sockets, parameter schema, doc string and a WGSL `fn node(uv: vec2f) -> vec4f`. Then add a graph that uses it to `tests/golden/cases/nodes.vfxf` and run `npm run test:golden:update`.
 
 Every push also builds the portable Windows `.exe` in GitHub Actions (artifact `VFXForge-portable`).
 
@@ -29,10 +47,15 @@ Every push also builds the portable Windows `.exe` in GitHub Actions (artifact `
 
 ```
 docs/        the spec, plus progress screenshots
-electron/    main process and preload
+electron/    main process, preload, file I/O, headless commands
 src/
-  app/       React shell, panels, theme tokens
-  engine/    WebGPU device and shared WGSL
+  app/       React shell, panels, theme tokens, document session
+  doc/       document model, ops, history, .vfxf format
+  engine/    node API, validation, shader generation, evaluator, shared WGSL
+  nodes/     one file per node type
   preview/   preview pane
+  headless/  engine entry without UI
+  library/   example projects
 tests/
+  golden/    cases (.vfxf) and expected renders
 ```
