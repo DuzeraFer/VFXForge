@@ -22,6 +22,11 @@ const api = {
   readAsset: (projectPath: string | null, ref: string): Promise<Uint8Array | null> => ipcRenderer.invoke("asset:read", projectPath, ref),
   /** Lets the artist pick an image, copies it into the project and returns its reference. */
   importAsset: (projectPath: string | null): Promise<string | null> => ipcRenderer.invoke("asset:import", projectPath),
+  /** Stores an RGBA picture made in the window as a PNG of the project and returns its reference. */
+  storeImage: (projectPath: string | null, image: { width: number; height: number; data: Uint8Array }): Promise<string | null> => ipcRenderer.invoke("asset:storeImage", projectPath, image),
+  /** Copies an image file, named by its full path, into the project's images. */
+  importAssetPath: (projectPath: string | null, file: string): Promise<{ ok: true; ref: string; name: string } | { ok: false; error: string }> =>
+    ipcRenderer.invoke("asset:importPath", projectPath, file),
 
   /** Lets the artist pick where a function file goes and writes it. Returns the path, or null if cancelled. */
   saveFunctionFile: (text: string, suggestedName: string): Promise<string | null> => ipcRenderer.invoke("function:save", text, suggestedName),

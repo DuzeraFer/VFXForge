@@ -1704,3 +1704,224 @@ kbd,
 .preset-remove:hover {
   color: var(--color-ink);
 }
+
+/* Compare in Preview */
+.preview-image {
+  position: relative;
+}
+.preview-compare {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: inherit;
+  pointer-events: none;
+}
+.preview-split {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 13px;
+  margin-left: -6px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.preview-split::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 6px;
+  width: 1px;
+  background: #ffffff;
+  box-shadow: 0 0 0 0.5px rgb(0 0 0 / 60%);
+}
+.preview-split-label {
+  position: absolute;
+  top: 6px;
+  max-width: 120px;
+  padding: 1px 6px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 65%);
+  color: #ecebe8;
+  font-size: 10px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.preview-split-now {
+  right: 12px;
+}
+.preview-split-other {
+  left: 12px;
+}
+.chip-select[data-on] {
+  color: var(--color-select);
+}
+
+/* Reference board */
+.reference-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 6px;
+  padding: 0 var(--space-3);
+}
+.reference-thumb {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--color-thumb);
+  outline: 1px solid var(--color-hairline);
+}
+.reference-thumb:hover {
+  outline-color: var(--color-hairline-strong);
+}
+.reference-thumb[aria-pressed="true"] {
+  outline: 1.5px solid var(--color-select);
+}
+.reference-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.reference-missing {
+  color: var(--color-ink-faint);
+}
+.reference-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-2) var(--space-3) 0;
+}
+.reference-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.left-panel .empty-note {
+  padding: 0 var(--space-3);
+}
+
+/* Comments */
+.group-header-static {
+  min-height: 24px;
+}
+.comment-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--color-surface-sunk);
+  outline: 1px solid var(--color-hairline);
+}
+.comment-thread[data-resolved] {
+  opacity: 0.6;
+}
+.comment-where {
+  align-self: flex-start;
+  font-size: 11px;
+  color: var(--color-ink-muted);
+}
+.comment-where:hover:not(:disabled) {
+  color: var(--color-select);
+}
+.comment-message[data-agent] {
+  padding-left: 8px;
+  border-left: 2px solid var(--color-agent);
+}
+.comment-head {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 11px;
+}
+.comment-author {
+  font-weight: 500;
+  color: var(--color-ink);
+}
+.comment-message[data-agent] .comment-author {
+  color: var(--color-agent-ink);
+}
+.comment-time {
+  color: var(--color-ink-faint);
+}
+.comment-text {
+  margin: 2px 0 0;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.comment-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.comment-composer {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+}
+.comment-input {
+  min-height: 44px;
+  resize: none;
+}
+.node-comment-mark {
+  flex: none;
+  min-width: 16px;
+  height: 16px;
+  margin-right: 2px;
+  padding: 0 4px;
+  border-radius: 8px 8px 8px 2px;
+  background: var(--color-select);
+  color: var(--color-on-select);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* Variations */
+.variation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: var(--space-2);
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 2px;
+}
+.variation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 8px;
+  outline: 1px solid var(--color-hairline);
+  text-align: left;
+}
+.variation:hover {
+  outline: 1.5px solid var(--color-select);
+  background: var(--color-raised);
+}
+.variation-image {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  object-fit: contain;
+  background-color: #2a2a2a;
+  background-image: conic-gradient(#343434 25%, transparent 0 50%, #343434 0 75%, transparent 0);
+  background-size: 16px 16px;
+}
+.variation-label {
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--color-ink-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -9,6 +9,9 @@
 import {
   createGraph,
   parseSocketRef,
+  type CommentThread,
+  type Reference,
+  type Snapshot,
   type ExposedParam,
   type Graph,
   type GraphSettings,
@@ -28,6 +31,10 @@ export type Op =
   | { op: "remove_graph"; graphId: string }
   | { op: "restore_graph"; graph: Graph; index: number }
   | { op: "set_project"; name?: string; seed?: number }
+  /** The reference board, comment threads and snapshots are small lists; each is replaced as a whole. */
+  | { op: "set_references"; references: Reference[] }
+  | { op: "set_comments"; comments: CommentThread[] }
+  | { op: "set_snapshots"; snapshots: Snapshot[] }
   /** `description: null` removes it. */
   | { op: "set_graph"; graphId: string; name?: string; settings?: Partial<GraphSettings>; function?: boolean; description?: string | null }
   /** Shows a node's parameter at graph level, under the name `as` (default: the parameter's name). On a function it becomes a parameter of the function's node. */
@@ -58,6 +65,15 @@ export type Op =
   | ({ op: "set_node_flags"; graphId: string; id: string; locked?: boolean; bypass?: boolean } & NodeGuard)
 
 export type OpName = Op["op"]
+
+function uniqueIds(items: readonly { id: string }[], what: string): void {
+  const seen = new Set<string>()
+  for (const item of items) {
+    if (!item || typeof item.id !== "string" || item.id === "") throw new OpError("invalid_value", `Every ${what} needs an id.`)
+    if (seen.has(item.id)) throw new OpError("duplicate_id", `Two ${what}s have the id "${item.id}".`)
+    seen.add(item.id)
+  }
+}
 
 export type OpErrorCode =
   | "unknown_graph"
@@ -280,6 +296,31 @@ export function applyOp(project: Project, op: Op, options: ApplyOptions = {}): O
         next.seed = op.seed
       }
       return { project: next, inverse: [inverse] }
+    }
+
+    case "set_references": {
+      uniqueIds(op.references, "reference")
+      for (const r of op.references) if (typeof r.image !== "string") throw new OpError("invalid_value", "Every reference needs an image.")
+      return { project: { ...project, references: op.references.map((r) => ({ ...r })) }, inverse: [{ op: "set_references", references: project.references }] }
+    }
+
+    case "set_comments": {
+      uniqueIds(op.comments, "comment thread")
+      for (const thread of op.comments) {
+        if (!Array.isArray(thread.messages) || thread.messages.length === 0) throw new OpError("invalid_value", "A comment thread needs at least one message.")
+        for (const m of thread.messages) {
+          if (typeof m.author !== "string" || typeof m.text !== "string" || m.text.trim() === "" || typeof m.timestamp !== "string") throw new OpError("invalid_value", "Every comment needs an author, a text and a time.")
+        }
+      }
+      return { project: { ...project, comments: op.comments.map((c) => ({ ...c, messages: c.messages.map((m) => ({ ...m })) })) }, inverse: [{ op: "set_comments", comments: project.comments }] }
+    }
+
+    case "set_snapshots": {
+      uniqueIds(op.snapshots, "snapshot")
+      const next = { ...project }
+      if (op.snapshots.length > 0) next.snapshots = op.snapshots.map((snap) => ({ ...snap }))
+      else delete next.snapshots
+      return { project: next, inverse: [{ op: "set_snapshots", snapshots: project.snapshots ?? [] }] }
     }
 
     case "set_graph": {

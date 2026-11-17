@@ -57,13 +57,21 @@ export type GradientStop = { position: number; color: [number, number, number, n
 export type Gradient = { id: string; name: string; stops: GradientStop[] }
 export type GradientLib = { id: string; name: string; gradients: Gradient[] }
 
-export type Reference = { id: string; path: string; note?: string }
+/** A picture on the reference board. `image` is an asset reference ("images/<hash>.png"). */
+export type Reference = { id: string; image: string; name?: string; note?: string }
+
+export type CommentMessage = { author: string; text: string; timestamp: string; agent?: boolean }
+/** A conversation pinned to a node, or to a graph as a whole. */
 export type CommentThread = {
   id: string
   graphId?: string
   nodeId?: string
-  messages: { author: string; text: string; timestamp: string }[]
+  resolved?: boolean
+  messages: CommentMessage[]
 }
+
+/** A saved picture of an output at one moment, for comparing with later versions. */
+export type Snapshot = { id: string; name: string; image: string; graphId: string; target: string; frame: number; timestamp: string; by?: string }
 
 export type Project = {
   version: 1
@@ -74,6 +82,7 @@ export type Project = {
   gradients: GradientLib[]
   references: Reference[]
   comments: CommentThread[]
+  snapshots?: Snapshot[]
 }
 
 export const DEFAULT_GRAPH_SETTINGS: GraphSettings = {

@@ -6,7 +6,11 @@ The full spec lives in [`docs/`](docs/README.md). Build order and acceptance che
 
 ## Status
 
-**Phase 7 — Functions, presets and recipes.** A graph can be used as one node in other graphs: select some nodes and press **Make a function**, or turn on "Use as a node" for a whole graph. Pin a parameter to show it on the graph (and on the function's node), and save named **presets** of those values. Seven **recipes** ship in the Library: Cel Fire, Cel Smoke Puff, Slash Arc, Impact Burst, Magic Ring, Lightning Bolt and Dissolve Mask. Functions can be saved as `.vfxfn` files and opened in other projects. Before it: 77 node types including Pixel Expression and Packed Output (Phase 6), export and the Unity link (Phase 5), sprite sheets (Phase 4), the AI Image node (Phase 3b), Claude editing the live graph through MCP (Phase 3) and the dark "Bench" editor (Phase 2). Next: references, comments and snapshots for working with Claude.
+**Phase 8 — Working with Claude, round two.** A **reference board** for pictures of the look you want, with a note on each. **Comments** on nodes that Claude reads, acts on and answers. **Snapshots** and a **Compare** split in the Preview, against a snapshot or a reference. **Variations**: Claude renders several versions and you click the one you like; the Seeds button does it for eight seeds. Before it: functions, pinned parameters, presets and seven recipes (Phase 7), 77 node types (Phase 6), export and the Unity link (Phase 5), sprite sheets (Phase 4), the AI Image node (Phase 3b), Claude editing the live graph through MCP (Phase 3) and the dark "Bench" editor (Phase 2). Next: depth and polish.
+
+![Claude offers four variations to pick from](docs/progress/phase-8-variations.png)
+
+![Comparing with a snapshot](docs/progress/phase-8-compare.png)
 
 ![A slash and a magic ring from the shipped recipes](docs/progress/phase-7-functions.png)
 
@@ -35,6 +39,13 @@ In Unity, add the package from git URL `https://github.com/DuzeraFer/VFXForge.gi
 
 Claude can export with the `export` tool, but only into the folder you last exported to or the project's own folder.
 
+## Working with Claude on a look
+
+- **References** (left panel, the + button): add pictures of what you are after and write on each what to take from it. Claude looks at them before it plans, and compares its renders with them.
+- **Comments**: select a node and write what should change ("this tip is too thin"). The node gets a small count, Claude finds the thread, fixes it and answers there. With nothing selected the comment is about the whole graph.
+- **Snapshot** and **Compare** (under the Preview): keep a picture of the image as it is now, then pick it under Compare to see it next to the current one with a split you can drag.
+- **Variations**: when a choice is a matter of taste, Claude can put a grid of versions in front of you. Click one and it is applied as one step you can undo.
+
 ## Connect Claude
 
 With VFXForge open, click **Connect Claude** in the title bar. It copies one command; run it once in a terminal:
@@ -49,7 +60,7 @@ Then ask Claude Code something like "build a cel-shaded fire in VFXForge". The a
 - If it is not, the same command works without a window: `VFXForge.exe mcp project.vfxf` opens that project, and `save_project` writes it back.
 - Clients that speak HTTP can connect to the `url` in `mcp.json` with the header `Authorization: Bearer <token>`.
 
-Tools: `get_guide`, `get_basic_info`, `get_selection`, `get_graph`, `get_node`, `list_node_types`, `get_history`, `render`, `render_frames`, `measure`, `apply`, `create_graph`, `list_functions`, `add_function`, `create_function`, `generate_image`, `export`, `set_selection`, `save_project`, `finish_working`. See `docs/05-ai-integration.md`.
+Tools: `get_guide`, `get_basic_info`, `get_selection`, `get_graph`, `get_node`, `list_node_types`, `get_history`, `render`, `render_frames`, `measure`, `apply`, `create_graph`, `apply_text`, `list_functions`, `add_function`, `create_function`, `list_references`, `get_reference`, `add_reference`, `render_compare`, `list_comments`, `comment`, `reply`, `snapshot`, `render_variations`, `generate_image`, `export`, `set_selection`, `save_project`, `finish_working`. See `docs/05-ai-integration.md`.
 
 ![Cel fire sheet rendered by the engine](docs/progress/phase-1-cel-fire.png)
 
@@ -76,8 +87,11 @@ The same engine runs without a window:
 ```
 npx electron . render src/library/examples/cel_fire.vfxf --frame sheet --bg 2a1f2b --out renders
 npx electron . export src/library/examples/cel_fire.vfxf --format tga --out exported
+npx electron . sweep src/library/examples/cel_fire.vfxf --param n5.intensity=0.05:0.5:4 --out sweeps
 npx electron . golden tests/golden [--update]
 ```
+
+`sweep` writes one picture per value of a parameter (`node.param=from:to:count`, or values with commas) or per seed (`--seed 1:8`), and a contact sheet of them all.
 
 On a machine without a GPU, set `VFXFORGE_SOFTWARE_GPU=1` (and on Linux run under `xvfb-run`).
 

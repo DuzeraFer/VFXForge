@@ -26,7 +26,7 @@ import {
   type PendingWire
 } from "../app/commands"
 import { session, type AgentState } from "../app/session"
-import { parseSocketRef, type Graph, type Op } from "../doc"
+import { parseSocketRef, type CommentThread, type Graph, type Op } from "../doc"
 import { isDrivable, type DataType } from "../engine/nodeDef"
 import type { ResolvedGraph } from "../engine/validate"
 import { registry } from "../nodes"
@@ -42,11 +42,14 @@ type Props = {
   pinnedNodeId: string | null
   tool: string
   agent: AgentState
+  /** Comment threads of the project; open ones show as a mark on their node. */
+  comments: readonly CommentThread[]
 }
 
 type SearchState = { x: number; y: number; flow: [number, number]; wire: PendingWire | null }
 
-function buildNodes(graph: Graph, resolved: ResolvedGraph, selection: readonly string[], pinned: string | null, agent: AgentState, previous: CardNode[]): CardNode[] {
+function buildNodes(graph: Graph, resolved: ResolvedGraph, selection: readonly string[], pinned: string | null, agent: AgentState, comments: readonly CommentThread[], previous: CardNode[]): CardNode[] {
+  const open = comments.filter((c) => c.graphId === graph.id && !c.resolved)
   const before = new Map(previous.map((n) => [n.id, n]))
   const selected = new Set(selection)
   return graph.nodes.map((node) => {
@@ -67,7 +70,8 @@ function buildNodes(graph: Graph, resolved: ResolvedGraph, selection: readonly s
         pinned: pinned === node.id,
         outputTypes,
         agent: agent.touched[node.id],
-        freshIndex: agent.fresh.indexOf(node.id)
+        freshIndex: agent.fresh.indexOf(node.id),
+        comments: open.filter((c) => c.nodeId === node.id).length
       }
     }
   })
@@ -102,7 +106,7 @@ function isTyping(): boolean {
   return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || (el as HTMLElement).isContentEditable)
 }
 
-function Canvas({ graph, resolved, selection, pinnedNodeId, tool, agent }: Props): ReactElement {
+function Canvas({ graph, resolved, selection, pinnedNodeId, tool, agent, comments }: Props): ReactElement {
   const flow = useReactFlow()
   const wrapRef = useRef<HTMLDivElement>(null)
   const pointer = useRef({ x: 0, y: 0, inside: false })
@@ -114,8 +118,8 @@ function Canvas({ graph, resolved, selection, pinnedNodeId, tool, agent }: Props
   const lastEdit = agent.working.length > 0 ? [...agent.log].reverse().find((e) => e.transactionId !== undefined && e.graphId === graph.id && !e.reverted && (e.nodeIds?.length ?? 0) > 0) : undefined
 
   useEffect(() => {
-    setNodes((previous) => buildNodes(graph, resolved, selection, pinnedNodeId, agent, previous))
-  }, [graph, resolved, selection, pinnedNodeId, agent.touched, agent.fresh])
+    setNodes((previous) => buildNodes(graph, resolved, selection, pinnedNodeId, agent, comments, previous))
+  }, [graph, resolved, selection, pinnedNodeId, agent.touched, agent.fresh, comments])
 
   // Frame the graph when it is opened (docs/02 §2.6).
   const measured = useNodesInitialized()

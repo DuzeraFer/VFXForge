@@ -1,0 +1,128 @@
+/**
+ * The parts of a project that are about working on it rather than what it
+ * renders: the reference board, comment threads and snapshots (docs/05 §5.7).
+ * Each function returns the op that makes the change, so the editor and
+ * agents go through the same undoable path.
+ */
+
+import type { Op } from "./ops"
+import type { CommentMessage, CommentThread, Project, Reference, Snapshot } from "./types"
+
+export class BoardError extends Error {}
+
+function freshId(taken: readonly { id: string }[], prefix: string): string {
+  const ids = new Set(taken.map((item) => item.id))
+  for (let i = taken.length + 1; ; i++) if (!ids.has(`${prefix}${i}`)) return `${prefix}${i}`
+}
+
+const clean = (text: string, limit: number): string => text.replace(/\r\n/g, "\n").trim().slice(0, limit)
+
+// ── References ────────────────────────────────────────────
+
+export function addReference(project: Project, image: string, name?: string, note?: string): { op: Op; id: string } {
+  const existing = project.references.find((r) => r.image === image)
+  if (existing) throw new BoardError(`That picture is already on the board as ${existing.id}.`)
+  const id = freshId(project.references, "ref")
+  const reference: Reference = { id, image }
+  if (name && clean(name, 80)) reference.name = clean(name, 80)
+  if (note && clean(note, 2000)) reference.note = clean(note, 2000)
+  return { op: { op: "set_references", references: [...project.references, reference] }, id }
+}
+
+export function updateReference(project: Project, id: string, patch: { name?: string; note?: string }): Op {
+  if (!project.references.some((r) => r.id === id)) throw new BoardError(`There is no reference "${id}".`)
+  return {
+    op: "set_references",
+    references: project.references.map((r) => {
+      if (r.id !== id) return r
+      const next: Reference = { ...r }
+      for (const key of ["name", "note"] as const) {
+        if (patch[key] === undefined) continue
+        const text = clean(patch[key], key === "name" ? 80 : 2000)
+        if (text) next[key] = text
+        else delete next[key]
+      }
+      return next
+    })
+  }
+}
+
+export function removeReference(project: Project, id: string): Op {
+  if (!project.references.some((r) => r.id === id)) throw new BoardError(`There is no reference "${id}".`)
+  return { op: "set_references", references: project.references.filter((r) => r.id !== id) }
+}
+
+// ── Comments ──────────────────────────────────────────────
+
+export type Speaker = { author: string; agent?: boolean }
+
+function message(text: string, who: Speaker, now: Date): CommentMessage {
+  const body = clean(text, 4000)
+  if (!body) throw new BoardError("A comment needs some text.")
+  return { author: who.author, text: body, timestamp: now.toISOString(), ...(who.agent ? { agent: true } : {}) }
+}
+
+/** Starts a thread on a node, or on a graph when no node is given. */
+export function addComment(project: Project, where: { graphId: string; nodeId?: string }, text: string, who: Speaker, now = new Date()): { op: Op; id: string } {
+  const graph = project.graphs.find((g) => g.id === where.graphId)
+  if (!graph) throw new BoardError(`There is no graph "${where.graphId}".`)
+  if (where.nodeId !== undefined && !graph.nodes.some((n) => n.id === where.nodeId)) throw new BoardError(`Graph "${graph.id}" has no node "${where.nodeId}".`)
+  const id = freshId(project.comments, "c")
+  const thread: CommentThread = { id, graphId: graph.id, ...(where.nodeId ? { nodeId: where.nodeId } : {}), messages: [message(text, who, now)] }
+  return { op: { op: "set_comments", comments: [...project.comments, thread] }, id }
+}
+
+function changeThread(project: Project, id: string, change: (thread: CommentThread) => CommentThread): Op {
+  if (!project.comments.some((c) => c.id === id)) throw new BoardError(`There is no comment thread "${id}".`)
+  return { op: "set_comments", comments: project.comments.map((c) => (c.id === id ? change(c) : c)) }
+}
+
+/** Adds a message to a thread. Answering a resolved thread opens it again, unless `resolve` closes it. */
+export function replyToComment(project: Project, id: string, text: string, who: Speaker, resolve?: boolean, now = new Date()): Op {
+  return changeThread(project, id, (thread) => {
+    const next: CommentThread = { ...thread, messages: [...thread.messages, message(text, who, now)] }
+    if (resolve) next.resolved = true
+    else delete next.resolved
+    return next
+  })
+}
+
+export function resolveComment(project: Project, id: string, resolved: boolean): Op {
+  return changeThread(project, id, (thread) => {
+    const next: CommentThread = { ...thread }
+    if (resolved) next.resolved = true
+    else delete next.resolved
+    return next
+  })
+}
+
+export function removeComment(project: Project, id: string): Op {
+  if (!project.comments.some((c) => c.id === id)) throw new BoardError(`There is no comment thread "${id}".`)
+  return { op: "set_comments", comments: project.comments.filter((c) => c.id !== id) }
+}
+
+/** Threads of a graph whose node still exists (a thread on a deleted node is kept in the file but not shown). */
+export function threadsOf(project: Project, graphId: string, nodeId?: string): CommentThread[] {
+  const graph = project.graphs.find((g) => g.id === graphId)
+  if (!graph) return []
+  return project.comments.filter((c) => c.graphId === graphId && (nodeId === undefined ? c.nodeId === undefined || graph.nodes.some((n) => n.id === c.nodeId) : c.nodeId === nodeId))
+}
+
+// ── Snapshots ─────────────────────────────────────────────
+
+export const MAX_SNAPSHOTS = 40
+
+export function addSnapshot(project: Project, shot: Omit<Snapshot, "id" | "timestamp" | "name"> & { name?: string }, now = new Date()): { op: Op; id: string } {
+  const all = project.snapshots ?? []
+  const id = freshId(all, "s")
+  const name = clean(shot.name ?? "", 60) || `Snapshot ${all.length + 1}`
+  const snapshot: Snapshot = { id, name, image: shot.image, graphId: shot.graphId, target: shot.target, frame: shot.frame, timestamp: now.toISOString(), ...(shot.by ? { by: shot.by } : {}) }
+  // The oldest make room, so a long session does not fill the project with pictures.
+  return { op: { op: "set_snapshots", snapshots: [...all, snapshot].slice(-MAX_SNAPSHOTS) }, id }
+}
+
+export function removeSnapshot(project: Project, id: string): Op {
+  const all = project.snapshots ?? []
+  if (!all.some((s) => s.id === id)) throw new BoardError(`There is no snapshot "${id}".`)
+  return { op: "set_snapshots", snapshots: all.filter((s) => s.id !== id) }
+}

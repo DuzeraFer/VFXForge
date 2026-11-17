@@ -20,6 +20,7 @@ import { useDrag } from "./hooks/useDrag"
 import { useTheme } from "./hooks/useTheme"
 import { Toast } from "./components/Toast"
 import { Settings } from "./components/Settings"
+import { Variations } from "./components/Variations"
 import { ExportDialog } from "./components/ExportDialog"
 import { engineRef } from "./engineRef"
 import { assets } from "./assetStore"
@@ -172,12 +173,12 @@ export function App(): ReactElement {
         <EditorContext.Provider value={editor}>
           <div className="workspace" style={{ gridTemplateColumns: `${leftWidth}px var(--toolstrip-width) 1fr ${rightWidth}px` }}>
             <div className="left-wrap">
-              <LeftPanel graphs={doc.project.graphs} activeGraphId={doc.activeGraphId} history={doc.history} activity={doc.agent.log} />
+              <LeftPanel references={doc.project.references} graphs={doc.project.graphs} activeGraphId={doc.activeGraphId} history={doc.history} activity={doc.agent.log} />
               <div className="resize-handle resize-handle-x resize-handle-right" onPointerDown={dragLeft} />
             </div>
             <ToolStrip tool={tool} onTool={setTool} />
             {activeGraph && resolved ? (
-              <GraphCanvas graph={activeGraph} resolved={resolved} selection={doc.selection} pinnedNodeId={doc.pinnedNodeId} tool={tool} agent={doc.agent} />
+              <GraphCanvas graph={activeGraph} resolved={resolved} selection={doc.selection} pinnedNodeId={doc.pinnedNodeId} tool={tool} agent={doc.agent} comments={doc.project.comments} />
             ) : (
               <div className="graph-canvas" />
             )}
@@ -205,6 +206,7 @@ export function App(): ReactElement {
           <Toast notice={doc.notice} />
           <Settings />
           <ExportDialog />
+          <Variations />
         </EditorContext.Provider>
       )}
     </div>

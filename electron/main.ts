@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, safeStorage, shell, type MenuItemConstructorOptions } from "electron"
-import { dirname, join, resolve } from "node:path"
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { basename, dirname, extname, isAbsolute, join, resolve } from "node:path"
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs"
+import { PNG } from "pngjs"
 import type { ExportFormat, ExportImage, ExportResult } from "../src/export/types"
 import { isInside, writeExport, type JpegEncoder } from "./exportFiles"
 import type { AiGenerateResult, AiImageRequest, AiStatus } from "../src/ai/imageOptions"
@@ -166,6 +167,36 @@ ipcMain.handle("asset:import", async (event, projectPath: string | null): Promis
   const result = await dialog.showOpenDialog(win, { properties: ["openFile"], filters: [{ name: "Images", extensions: [...IMAGE_EXTENSIONS] }] })
   if (result.canceled || result.filePaths.length === 0) return null
   return importAsset(assetHome(projectPath), result.filePaths[0])
+})
+
+/** A picture the window made (a snapshot of an output): stored as a PNG like any other image of the project. */
+ipcMain.handle("asset:storeImage", (_event, projectPath: string | null, image: { width: number; height: number; data: Uint8Array }): string | null => {
+  const { width, height, data } = image ?? ({} as { width: number; height: number; data: Uint8Array })
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width > 8192 || height > 8192) return null
+  if (!(data instanceof Uint8Array) || data.length !== width * height * 4) return null
+  const png = new PNG({ width, height })
+  png.data = Buffer.from(data.buffer, data.byteOffset, data.byteLength)
+  return storeAsset(assetHome(projectPath), "images", PNG.sync.write(png, { colorType: 6 }), "png")
+})
+
+/**
+ * A picture named by its path, for the reference board. Agents use this, so it
+ * only ever reads files that are pictures by name, by size and by content, and
+ * the answer is a reference into the project's own images, never file content.
+ */
+ipcMain.handle("asset:importPath", (_event, projectPath: string | null, file: string): { ok: true; ref: string; name: string } | { ok: false; error: string } => {
+  try {
+    if (typeof file !== "string" || !isAbsolute(file)) return { ok: false, error: "Give the full path of an image file on this computer." }
+    const extension = extname(file).slice(1).toLowerCase()
+    if (!(IMAGE_EXTENSIONS as readonly string[]).includes(extension)) return { ok: false, error: "Only PNG, JPEG and WebP files can go on the reference board." }
+    if (!existsSync(file) || !statSync(file).isFile()) return { ok: false, error: `There is no file at ${file}.` }
+    if (statSync(file).size > 32 * 1024 * 1024) return { ok: false, error: "That file is larger than 32 MB." }
+    const bytes = readFileSync(file)
+    if (nativeImage.createFromBuffer(bytes).isEmpty() && extension !== "webp") return { ok: false, error: "That file is not a picture VFXForge can read." }
+    return { ok: true, ref: storeAsset(assetHome(projectPath), "images", bytes, extension), name: basename(file, extname(file)).slice(0, 80) }
+  } catch {
+    return { ok: false, error: "That file could not be read." }
+  }
 })
 
 // ── Export (docs/06 §6.7) ─────────────────────────────────

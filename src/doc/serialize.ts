@@ -102,7 +102,8 @@ export function serializeProject(project: Project): string {
     `  "functions": ${graphList(project.functions, "  ")},`,
     `  "gradients": ${block(project.gradients, "  ")},`,
     `  "references": ${block(project.references, "  ")},`,
-    `  "comments": ${block(project.comments, "  ")}`,
+    `  "comments": ${block(project.comments, "  ")}${project.snapshots && project.snapshots.length > 0 ? "," : ""}`,
+    ...(project.snapshots && project.snapshots.length > 0 ? [`  "snapshots": ${block(project.snapshots, "  ")}`] : []),
     "}",
     ""
   ].join("\n")
@@ -124,6 +125,11 @@ function str(value: unknown, path: string): string {
 function arr(value: unknown, path: string): unknown[] {
   if (value === undefined) return []
   if (!Array.isArray(value)) fail(path, "expected a list")
+  return value
+}
+
+function obj(value: unknown, path: string): Record<string, unknown> {
+  if (!isRecord(value)) fail(path, "expected an object")
   return value
 }
 
@@ -240,6 +246,24 @@ export function parseProject(text: string): Project {
     graphIds.add(graph.id)
   }
 
+  const references = arr(raw.references, "project.references").map((item, i) => {
+    const r = obj(item, `project.references[${i}]`)
+    // Files from before the board existed could name a path; those entries have no picture to show.
+    return { ...r, id: str(r.id, `project.references[${i}].id`), image: typeof r.image === "string" ? r.image : "" } as Project["references"][number]
+  })
+  const comments = arr(raw.comments, "project.comments").map((item, i) => {
+    const c = obj(item, `project.comments[${i}]`)
+    const messages = arr(c.messages, `project.comments[${i}].messages`).map((m, j) => {
+      const message = obj(m, `project.comments[${i}].messages[${j}]`)
+      return { ...message, author: str(message.author, "author"), text: str(message.text, "text"), timestamp: str(message.timestamp, "timestamp") }
+    })
+    return { ...c, id: str(c.id, `project.comments[${i}].id`), messages } as Project["comments"][number]
+  })
+  const snapshots = raw.snapshots === undefined ? [] : arr(raw.snapshots, "project.snapshots").map((item, i) => {
+    const snap = obj(item, `project.snapshots[${i}]`)
+    return { ...snap, id: str(snap.id, "id"), name: str(snap.name, "name"), image: str(snap.image, "image") } as NonNullable<Project["snapshots"]>[number]
+  })
+
   return {
     version: 1,
     name: str(raw.name, "project.name"),
@@ -247,7 +271,8 @@ export function parseProject(text: string): Project {
     graphs,
     functions: arr(raw.functions, "project.functions").map((g, i) => parseGraph(g, `project.functions[${i}]`)),
     gradients: arr(raw.gradients, "project.gradients") as Project["gradients"],
-    references: arr(raw.references, "project.references") as Project["references"],
-    comments: arr(raw.comments, "project.comments") as Project["comments"]
+    references,
+    comments,
+    ...(snapshots.length > 0 ? { snapshots } : {})
   }
 }

@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState, type ReactElement } from "react"
 import { nodeTitle } from "../app/commands"
 import { Icon } from "../app/components/Icon"
 import { usePlayback } from "../app/playback"
-import { session } from "../app/session"
+import { deleteSnapshot, takeSnapshot, useAssetUrl } from "../app/board"
+import { session, useSession } from "../app/session"
+import { offerVariations } from "../app/variations"
+import { seedVariations } from "../engine/variations"
 import type { Graph } from "../doc/types"
 import type { Engine } from "../engine/evaluator"
 import type { GpuContext } from "../engine/gpu"
@@ -90,6 +93,14 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
   const [pan, setPan] = useState<[number, number]>([0, 0])
   const [tile, setTile] = useState(false)
   const [background, setBackground] = useState<Background>("Checker")
+  /** What the image is compared with: "ref:<id>" or "snap:<id>", shown right of a movable split. */
+  const [compare, setCompare] = useState("")
+  const [split, setSplit] = useState(0.5)
+  const { project } = useSession()
+  const snapshots = (project.snapshots ?? []).filter((snap) => snap.graphId === graph?.id)
+  const compared = compare.startsWith("ref:") ? project.references.find((r) => r.id === compare.slice(4)) : snapshots.find((snap) => snap.id === compare.slice(5))
+  const compareUrl = useAssetUrl(compared?.image)
+  const comparedName = compared ? ("target" in compared ? compared.name : (compared.name ?? compared.id)) : ""
 
   const target = useMemo(
     () => (graph && resolved ? pickTarget(graph, resolved, mode, pinnedNodeId, selection) : null),
@@ -225,6 +236,49 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
     }
   }, [seam, engine, graph, projectSeed, frameTarget, target, frames, assetRevision, functionsRevision])
 
+  const snapshot = async (): Promise<void> => {
+    const at = frameTarget ?? target
+    if (!engine || !graph || !at) return
+    try {
+      engine.setGraph(graph, projectSeed)
+      const result = engine.evaluate(at.nodeId, at.output, frame)
+      const data = toRgba8(await engine.readPixels(result))
+      const id = await takeSnapshot({ width: result.width, height: result.height, data }, { graphId: graph.id, target: `${at.nodeId}.${at.output}`, frame })
+      if (id) setCompare(`snap:${id}`)
+    } catch (e) {
+      session.say(e instanceof Error ? e.message : String(e), true)
+    }
+  }
+
+  const tryVariations = async (): Promise<void> => {
+    const at = frameTarget ?? target
+    if (!engine || !graph || !at) return
+    try {
+      const items = []
+      for (const variation of seedVariations(projectSeed, 8)) {
+        engine.setGraph(graph, variation.seed!)
+        const result = engine.evaluate(at.nodeId, at.output, frame)
+        items.push({ variation, image: { width: result.width, height: result.height, data: toRgba8(await engine.readPixels(result)) } })
+      }
+      engine.setGraph(graph, projectSeed)
+      offerVariations({ from: null, graphId: graph.id, target: `${at.nodeId}.${at.output}`, note: "The same graph with eight other seeds. Click one to use that seed.", items })
+    } catch (e) {
+      session.say(e instanceof Error ? e.message : String(e), true)
+    }
+  }
+
+  const dragSplit = (e: React.PointerEvent<HTMLDivElement>): void => {
+    e.stopPropagation()
+    const box = e.currentTarget.parentElement!.getBoundingClientRect()
+    const move = (event: PointerEvent): void => setSplit(Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)))
+    const stop = (): void => {
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", stop)
+    }
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", stop)
+  }
+
   const zoomBy = (factor: number): void => {
     const next = Math.min(32, Math.max(0.05, scale * factor))
     setZoom(next)
@@ -280,6 +334,22 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
             style={{ width, height, imageRendering: scale >= 2 ? "pixelated" : "auto" }}
             data-testid="preview-canvas"
           />
+          {compared && compareUrl && (
+            <>
+              <img
+                className="preview-compare"
+                src={compareUrl}
+                alt={comparedName}
+                draggable={false}
+                style={{ clipPath: `inset(0 0 0 ${split * 100}%)`, imageRendering: scale >= 2 ? "pixelated" : "auto" }}
+                data-testid="preview-compare"
+              />
+              <div className="preview-split" style={{ left: `${split * 100}%` }} onPointerDown={dragSplit} title="Drag to move the split" data-testid="preview-split">
+                <span className="preview-split-label preview-split-now">now</span>
+                <span className="preview-split-label preview-split-other">{comparedName}</span>
+              </div>
+            </>
+          )}
         </div>
         {!target && !error && <div className="preview-empty">{graph?.nodes.length ? "Select a node with an image output." : "Nothing to show yet."}</div>}
         {error && <div className="preview-error">{error}</div>}
@@ -325,6 +395,50 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
           </select>
           <Icon name="chevron" size={10} />
         </label>
+        {(project.references.length > 0 || snapshots.length > 0) && (
+          <label className="chip chip-select" title="Show a reference or a snapshot next to the image, with a split you can drag" data-on={compared ? true : undefined}>
+            <select value={compared ? compare : ""} onChange={(e) => setCompare(e.target.value)} aria-label="Compare with" data-testid="compare-select">
+              <option value="">Compare</option>
+              {project.references.length > 0 && (
+                <optgroup label="References">
+                  {project.references.map((r) => (
+                    <option key={r.id} value={`ref:${r.id}`}>
+                      {r.name ?? r.id}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {snapshots.length > 0 && (
+                <optgroup label="Snapshots">
+                  {snapshots.map((snap) => (
+                    <option key={snap.id} value={`snap:${snap.id}`}>
+                      {snap.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+            <Icon name="chevron" size={10} />
+          </label>
+        )}
+        {compared && "target" in compared && (
+          <button
+            className="text-button"
+            title="Delete this snapshot"
+            onClick={() => {
+              deleteSnapshot(compared.id)
+              setCompare("")
+            }}
+          >
+            Delete
+          </button>
+        )}
+        <button className="text-button" disabled={!target} onClick={() => void snapshot()} title="Keep a picture of this image as it is now, to compare with later versions" data-testid="snapshot-button">
+          Snapshot
+        </button>
+        <button className="text-button" disabled={!target} onClick={() => void tryVariations()} title="Show this image with eight other seeds and pick one" data-testid="variations-button">
+          Seeds
+        </button>
         {(animated || targetNode?.type === "sheet_output") && (
           <button
             className="text-button"

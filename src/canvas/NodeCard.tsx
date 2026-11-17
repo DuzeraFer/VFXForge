@@ -19,6 +19,8 @@ export type CardData = {
   agent?: string
   /** Position in the agent's latest edit, for the staggered fade-in; -1 otherwise. */
   freshIndex: number
+  /** Open comment threads on this node. */
+  comments: number
   /** Resolved type of each output, by output name. */
   outputTypes: Record<string, DataType | undefined>
 }
@@ -77,7 +79,7 @@ function summaryOf(node: Node, def: ResolvedNodeDef | undefined): { text: string
 }
 
 function NodeCardView({ id, data, selected }: NodeProps<CardNode>): ReactElement {
-  const { node, def, problems, pinned, outputTypes, agent, freshIndex } = data
+  const { node, def, problems, pinned, outputTypes, agent, freshIndex, comments } = data
   const [showParams, setShowParams] = useState(false)
   const updateInternals = useUpdateNodeInternals()
 
@@ -113,6 +115,11 @@ function NodeCardView({ id, data, selected }: NodeProps<CardNode>): ReactElement
       <header className="node-header">
         <span className="node-title">{nodeTitle(node)}</span>
         {problems.length > 0 && <span className="node-error-dot" aria-label="Error" />}
+        {comments > 0 && (
+          <span className="node-comment-mark" title={`${comments} open comment${comments === 1 ? "" : "s"}. Select the node to read ${comments === 1 ? "it" : "them"}.`} data-testid="comment-mark">
+            {comments}
+          </span>
+        )}
         {drivable.length > 0 && (
           <button
             className="node-header-button nodrag"
