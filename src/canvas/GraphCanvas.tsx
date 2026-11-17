@@ -25,7 +25,7 @@ import {
   toggleBypass,
   type PendingWire
 } from "../app/commands"
-import { session } from "../app/session"
+import { session, type AgentState } from "../app/session"
 import { parseSocketRef, type Graph, type Op } from "../doc"
 import { isDrivable, type DataType } from "../engine/nodeDef"
 import type { ResolvedGraph } from "../engine/validate"
@@ -41,11 +41,12 @@ type Props = {
   selection: readonly string[]
   pinnedNodeId: string | null
   tool: string
+  agent: AgentState
 }
 
 type SearchState = { x: number; y: number; flow: [number, number]; wire: PendingWire | null }
 
-function buildNodes(graph: Graph, resolved: ResolvedGraph, selection: readonly string[], pinned: string | null, previous: CardNode[]): CardNode[] {
+function buildNodes(graph: Graph, resolved: ResolvedGraph, selection: readonly string[], pinned: string | null, agent: AgentState, previous: CardNode[]): CardNode[] {
   const before = new Map(previous.map((n) => [n.id, n]))
   const selected = new Set(selection)
   return graph.nodes.map((node) => {
@@ -59,7 +60,15 @@ function buildNodes(graph: Graph, resolved: ResolvedGraph, selection: readonly s
       type: "vfx" as const,
       position: { x: node.position[0], y: node.position[1] },
       selected: selected.has(node.id),
-      data: { node, def, problems: resolved.problems.filter((p) => p.nodeId === node.id), pinned: pinned === node.id, outputTypes }
+      data: {
+        node,
+        def,
+        problems: resolved.problems.filter((p) => p.nodeId === node.id),
+        pinned: pinned === node.id,
+        outputTypes,
+        agent: agent.touched[node.id],
+        freshIndex: agent.fresh.indexOf(node.id)
+      }
     }
   })
 }
@@ -93,7 +102,7 @@ function isTyping(): boolean {
   return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || (el as HTMLElement).isContentEditable)
 }
 
-function Canvas({ graph, resolved, selection, pinnedNodeId, tool }: Props): ReactElement {
+function Canvas({ graph, resolved, selection, pinnedNodeId, tool, agent }: Props): ReactElement {
   const flow = useReactFlow()
   const wrapRef = useRef<HTMLDivElement>(null)
   const pointer = useRef({ x: 0, y: 0, inside: false })
@@ -101,10 +110,12 @@ function Canvas({ graph, resolved, selection, pinnedNodeId, tool }: Props): Reac
   const [nodes, setNodes] = useState<CardNode[]>([])
   const [search, setSearch] = useState<SearchState | null>(null)
   const edges = useMemo(() => buildEdges(graph, resolved), [graph, resolved])
+  // The latest agent edit to this graph that still stands, offered with Show and Undo while the agent works.
+  const lastEdit = agent.working.length > 0 ? [...agent.log].reverse().find((e) => e.transactionId !== undefined && e.graphId === graph.id && !e.reverted && (e.nodeIds?.length ?? 0) > 0) : undefined
 
   useEffect(() => {
-    setNodes((previous) => buildNodes(graph, resolved, selection, pinnedNodeId, previous))
-  }, [graph, resolved, selection, pinnedNodeId])
+    setNodes((previous) => buildNodes(graph, resolved, selection, pinnedNodeId, agent, previous))
+  }, [graph, resolved, selection, pinnedNodeId, agent.touched, agent.fresh])
 
   // Frame the graph when it is opened (docs/02 §2.6).
   const measured = useNodesInitialized()
@@ -314,6 +325,32 @@ function Canvas({ graph, resolved, selection, pinnedNodeId, tool }: Props): Reac
         <div className="canvas-empty canvas-hint">
           <div className="canvas-empty-title">Empty graph</div>
           <div>Press Space or double-click to add a node.</div>
+        </div>
+      )}
+      {lastEdit && (
+        <div className="canvas-pill" data-testid="agent-edit-pill">
+          <span className="agent-dot">{lastEdit.agent.charAt(0).toUpperCase()}</span>
+          <span>
+            {lastEdit.agent} · {lastEdit.text}
+          </span>
+          <button
+            className="text-button"
+            onClick={() => {
+              session.select(lastEdit.nodeIds ?? [])
+              void flow.fitView({ padding: "48px", maxZoom: 1.5, duration: 150, nodes: (lastEdit.nodeIds ?? []).map((id) => ({ id })) })
+            }}
+          >
+            Show
+          </button>
+          <button
+            className="text-button"
+            onClick={() => {
+              const problem = session.revertAgentEdit(lastEdit.transactionId!)
+              if (problem) session.say(problem, true)
+            }}
+          >
+            Undo
+          </button>
         </div>
       )}
       {search && (

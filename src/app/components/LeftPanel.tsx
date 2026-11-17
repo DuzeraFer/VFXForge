@@ -3,7 +3,7 @@ import { searchNodes } from "../../canvas/NodeSearch"
 import type { Graph, Transaction } from "../../doc"
 import { nodeDefs } from "../../nodes"
 import { addGraph, addNodeAtCenter, prettyName } from "../commands"
-import { session } from "../session"
+import { session, type ActivityEntry } from "../session"
 import { Icon } from "./Icon"
 
 /** Library categories in the order of docs/04-node-library.md. */
@@ -110,13 +110,48 @@ function HistoryList({ history }: { history: { done: readonly Transaction[]; und
   )
 }
 
+/** What agents did, newest first, in their own words. Edits can be shown and undone one by one. */
+function ActivityList({ activity }: { activity: readonly ActivityEntry[] }): ReactElement {
+  return (
+    <ul className="row-list history-list">
+      {[...activity].reverse().map((entry) => (
+        <li key={entry.id} className="activity-row" data-reverted={entry.reverted || undefined} title={`${entry.agent} · ${new Date(entry.time).toLocaleTimeString()}`}>
+          <span className="agent-dot agent-dot-small">{entry.agent.charAt(0).toUpperCase()}</span>
+          <button
+            className="activity-text"
+            disabled={!entry.nodeIds || entry.nodeIds.length === 0}
+            onClick={() => {
+              if (entry.graphId && entry.graphId !== session.getState().activeGraphId) session.setActiveGraph(entry.graphId)
+              session.select(entry.nodeIds ?? [])
+            }}
+          >
+            {entry.text}
+          </button>
+          {entry.transactionId !== undefined && !entry.reverted && (
+            <button
+              className="text-button"
+              onClick={() => {
+                const problem = session.revertAgentEdit(entry.transactionId!)
+                if (problem) session.say(problem, true)
+              }}
+            >
+              Undo
+            </button>
+          )}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 type Props = {
   graphs: Graph[]
   activeGraphId: string | null
   history: { done: readonly Transaction[]; undone: readonly Transaction[] }
+  activity: readonly ActivityEntry[]
 }
 
-export function LeftPanel({ graphs, activeGraphId, history }: Props): ReactElement {
+export function LeftPanel({ graphs, activeGraphId, history, activity }: Props): ReactElement {
   return (
     <aside className="left-panel">
       <div className="left-panel-scroll">
@@ -146,6 +181,12 @@ export function LeftPanel({ graphs, activeGraphId, history }: Props): ReactEleme
         <Section title="Library">
           <Library />
         </Section>
+
+        {activity.length > 0 && (
+          <Section title="Agent activity">
+            <ActivityList activity={activity} />
+          </Section>
+        )}
 
         <Section title="History">
           <HistoryList history={history} />
