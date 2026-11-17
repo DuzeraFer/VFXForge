@@ -316,7 +316,7 @@ export class Session {
       if (this.path && !saveAs) {
         await api.saveProject(this.path, text)
       } else {
-        const path = await api.saveProjectAs(text, this.path ? fileName(this.path) : project.name)
+        const path = await api.saveProjectAs(text, this.path ? fileName(this.path) : project.name, this.path)
         if (!path) return
         this.path = path
       }

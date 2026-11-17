@@ -140,6 +140,13 @@ export const TOOL_SPECS: ToolSpec[] = [
     readOnly: false
   },
   {
+    name: "generate_image",
+    description:
+      "Asks an AI Image node (type ai_image) to draw its picture from its current prompt, mode, size and quality, using the artist's OpenAI account. It costs the artist money and takes up to a minute, so set the prompt carefully with apply first and do not retry in a loop. Only works if the artist allowed it in Settings, and only a few times per session; otherwise set the prompt and ask the artist to press Generate. Render the node afterwards to see the result.",
+    inputSchema: { type: "object", properties: { graphId, nodeId: { type: "string", description: "An ai_image node." } }, required: ["nodeId"] },
+    readOnly: false
+  },
+  {
     name: "create_graph",
     description: "Adds a new, empty graph to the project and returns its id. Does not switch the artist's view unless open is true.",
     inputSchema: {

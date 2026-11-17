@@ -7,6 +7,7 @@ import type { Node } from "../doc/types"
 import { isDrivable, type DataType, type ResolvedNodeDef } from "../engine/nodeDef"
 import type { Problem } from "../engine/validate"
 import { THUMBNAIL_SIZE } from "../preview/thumbnails"
+import { generationKey, useGeneration } from "../ai/generation"
 import { useEditor } from "./context"
 
 export type CardData = {
@@ -48,11 +49,26 @@ function format(value: unknown): string {
   return "…"
 }
 
+/** AI Image nodes say on the card when a picture is on its way, or why it did not arrive. */
+function GenerationNote({ nodeId }: { nodeId: string }): ReactElement | null {
+  const { busy, errors } = useGeneration()
+  const key = generationKey(session.getState().activeGraphId ?? "", nodeId)
+  if (busy[key]) return <div className="node-note">Generating…</div>
+  if (errors[key]) {
+    return (
+      <div className="node-note node-note-error" title={errors[key]}>
+        Not generated
+      </div>
+    )
+  }
+  return null
+}
+
 /** One quiet line under the thumbnail: what was changed from the defaults, and what drives the node. */
 function summaryOf(node: Node, def: ResolvedNodeDef | undefined): { text: string; driver: string | null } {
   const parts: string[] = []
   for (const [name, value] of Object.entries(node.params)) {
-    if (name in node.driven || def?.params[name]?.type === "gradient") continue
+    if (name in node.driven || def?.params[name]?.type === "gradient" || name === def?.asset) continue
     parts.push(def?.params[name]?.type === "floatList" ? format(value) : `${name.replace(/_/g, " ")} ${format(value)}`)
     if (parts.length === 2) break
   }
@@ -186,6 +202,7 @@ function NodeCardView({ id, data, selected }: NodeProps<CardNode>): ReactElement
           ))}
         </div>
       )}
+      {node.type === "ai_image" && <GenerationNote nodeId={node.id} />}
       {!def && <div className="node-missing">Unknown type “{node.type}”</div>}
     </div>
   )

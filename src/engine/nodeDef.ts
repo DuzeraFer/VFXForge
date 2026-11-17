@@ -61,6 +61,13 @@ export type NodeDef = {
   /** The shader reads `G.phase` / `G.frame`, so the result changes per frame. */
   usesTime?: boolean
   /**
+   * Name of a string parameter that holds an image file of the project
+   * (docs/06 §6.11), e.g. "ai/0123456789abcdef.png". The shader reads it with
+   * `sample_asset(uv)` and `has_asset`; until the file is loaded it reads as
+   * transparent black.
+   */
+  asset?: string
+  /**
    * Pixel node body. Must define `fn node(uv: vec2f) -> vec4f`. It can read
    * `P.<param>`, `G` (globals), `sample_<input>(uv)`, `has_<input>` and, for
    * multi-output nodes, the constant `OUT` (output index).
@@ -119,13 +126,19 @@ export function defineNode(def: NodeDef): ResolvedNodeDef {
     params[name] = schema
   }
 
+  if (def.asset !== undefined) {
+    if (!def.wgsl) throw new Error(`${where}: only pixel nodes can read an image file.`)
+    if (params[def.asset]?.type !== "string") throw new Error(`${where}: asset "${def.asset}" must be a string parameter.`)
+    if ("asset" in inputs) throw new Error(`${where}: "asset" cannot be an input name on a node that reads an image file.`)
+  }
+
   const valueInputs = Object.values(inputs).filter((i) => i.type === "value").length
   if (def.wgsl && valueInputs > 0) throw new Error(`${where}: pixel nodes take values through driven parameters, not inputs.`)
   if (def.evaluate && valueInputs !== Object.keys(inputs).length) throw new Error(`${where}: evaluate nodes can only take value inputs.`)
 
   if (def.wgsl) {
     if (!/fn\s+node\s*\(/.test(def.wgsl)) throw new Error(`${where}: wgsl must define fn node(uv: vec2f) -> vec4f.`)
-    if (Object.values(inputs).some((i) => i.type !== "value")) {
+    if (def.asset !== undefined || Object.values(inputs).some((i) => i.type !== "value")) {
       params.tiling = { type: "enum", default: "tile", options: TILING_MODES, doc: "How inputs are sampled outside 0–1." }
     }
     if (def.seeded) params.seed = { type: "int", default: 0, doc: "Offset added to the project seed." }

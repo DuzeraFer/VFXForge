@@ -6,7 +6,9 @@ import type { GradientStop, Graph, Node, ParamValue, Project } from "../doc"
 import type { ParamSchema, ResolvedNodeDef } from "../engine/nodeDef"
 import type { Problem } from "../engine/validate"
 import { registry } from "../nodes"
-import { ColorField, NumberField, Segmented, Select, Slider, TextField, Toggle, newGesture, type Rgba } from "./fields"
+import { generateFor, generationKey, useGeneration } from "../ai/generation"
+import { openSettings } from "../app/components/Settings"
+import { ColorField, NumberField, Segmented, Select, Slider, TextArea, TextField, Toggle, newGesture, type Rgba } from "./fields"
 import { GradientEditor } from "./GradientEditor"
 
 type Props = { project: Project; graph: Graph | null; selection: readonly string[]; problems: readonly Problem[] }
@@ -202,8 +204,88 @@ function ParamControl({ graph, node, name, schema }: { graph: Graph; node: Node;
 
 const COMMON = new Set(["seed", "tiling"])
 
+/** Image Sample: the file is chosen with a dialog and copied into the project. */
+function ImageFileRow({ graph, node }: { graph: Graph; node: Node }): ReactElement {
+  const file = typeof node.params.file === "string" ? node.params.file : ""
+  const choose = async (): Promise<void> => {
+    const api = window.vfxforge
+    if (!api) return session.say("Images can only be chosen inside the VFXForge app.", true)
+    try {
+      const ref = await api.importAsset(session.getState().path)
+      if (ref) session.apply([{ op: "set_params", graphId: graph.id, id: node.id, params: { file: ref } }], "Choose image")
+    } catch (error) {
+      session.say(`Could not use that image. ${error instanceof Error ? error.message : String(error)}`, true)
+    }
+  }
+  return (
+    <div className="param-row">
+      <span className="param-label">Image</span>
+      <span className="field field-grow field-driven" title={file || undefined}>
+        <span className="field-value mono">{file ? file.split("/").pop() : "None"}</span>
+      </span>
+      <button className="chip chip-button" onClick={() => void choose()}>
+        Choose…
+      </button>
+    </div>
+  )
+}
+
+/** AI Image: prompt and options, then Generate. The key is set once, in Settings. */
+function AiImagePanel({ graph, node, def }: { graph: Graph; node: Node; def: ResolvedNodeDef }): ReactElement {
+  const { status, busy, errors } = useGeneration()
+  const key = generationKey(graph.id, node.id)
+  const working = !!busy[key]
+  const prompt = typeof node.params.prompt === "string" ? node.params.prompt : ""
+  const hasImage = typeof node.params.image === "string" && node.params.image !== ""
+  const ready = status?.hasKey === true
+  return (
+    <Group title="Picture">
+      <div className="param-row" data-stacked>
+        <span className="param-label">Prompt</span>
+        <TextArea
+          value={prompt}
+          label="Prompt"
+          placeholder="A stylized smoke puff, soft round shapes, seen from the side"
+          onChange={(text) => session.apply([{ op: "set_params", graphId: graph.id, id: node.id, params: { prompt: text === "" ? null : text } }], "Set Prompt")}
+        />
+      </div>
+      {(["mode", "size", "quality"] as const).map((name) => (
+        <ParamControl key={name} graph={graph} node={node} name={name} schema={def.params[name]} />
+      ))}
+      <div className="param-row">
+        <button
+          className="button-primary button-wide"
+          data-testid="ai-generate"
+          disabled={working || !ready || prompt.trim() === ""}
+          title={!ready ? "Add your OpenAI API key in Settings first" : prompt.trim() === "" ? "Write a prompt first" : "Sends the prompt to OpenAI with your key"}
+          onClick={() => void generateFor(graph, node.id, { kind: "human" })}
+        >
+          {working ? "Generating…" : hasImage ? "Generate again" : "Generate"}
+        </button>
+      </div>
+      {errors[key] && (
+        <p className="inspector-problems inspector-note" data-testid="ai-error">
+          {errors[key]}
+        </p>
+      )}
+      {status && !status.hasKey && (
+        <p className="inspector-doc inspector-note">
+          This node uses your own OpenAI API key.{" "}
+          <button className="link-button" onClick={openSettings}>
+            Add it in Settings
+          </button>
+          . It is stored encrypted on this computer and is only sent to OpenAI.
+        </p>
+      )}
+      {working && <p className="inspector-doc inspector-note">This usually takes between ten seconds and a minute. You can keep working.</p>}
+    </Group>
+  )
+}
+
 function NodeInspector({ graph, node, def, problems }: { graph: Graph; node: Node; def: ResolvedNodeDef; problems: readonly Problem[] }): ReactElement {
-  const own = Object.entries(def.params).filter(([name]) => !COMMON.has(name))
+  // The AI Image node has its own panel; an image file is chosen with a button, not typed.
+  const special = node.type === "ai_image"
+  const own = special ? [] : Object.entries(def.params).filter(([name]) => !COMMON.has(name) && name !== def.asset)
   const common = Object.entries(def.params).filter(([name]) => COMMON.has(name))
   return (
     <>
@@ -225,6 +307,12 @@ function NodeInspector({ graph, node, def, problems }: { graph: Graph; node: Nod
         </ul>
       )}
       <p className="inspector-doc">{def.doc}</p>
+      {special && <AiImagePanel graph={graph} node={node} def={def} />}
+      {!special && def.asset !== undefined && (
+        <Group title="Image">
+          <ImageFileRow graph={graph} node={node} />
+        </Group>
+      )}
       {own.length > 0 && (
         <Group title="Parameters">
           {own.map(([name, schema]) => (

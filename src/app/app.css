@@ -1430,3 +1430,111 @@ kbd,
   background: var(--color-danger);
   color: #ffffff;
 }
+
+/* ── AI Image node, image files ─────────────────────────── */
+
+.field-area {
+  width: 100%;
+  min-height: 64px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-field);
+  outline: 0;
+  background: var(--color-field);
+  color: var(--color-ink);
+  font: inherit;
+  line-height: 1.4;
+  resize: vertical;
+  user-select: text;
+}
+.field-area:focus {
+  box-shadow: inset 0 0 0 1px var(--color-select);
+}
+.field-area::placeholder,
+.field-input::placeholder {
+  color: var(--color-ink-faint);
+}
+.button-wide {
+  flex: 1;
+  height: 28px;
+  padding: 0 12px;
+}
+.inspector-note {
+  margin: 0;
+}
+.link-button {
+  padding: 0;
+  color: var(--color-select);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.node-note {
+  padding: 3px 8px 5px;
+  font-size: 10px;
+  color: var(--color-agent-ink, var(--color-ink-muted));
+}
+.node-note-error {
+  color: var(--color-danger);
+}
+
+/* ── Dialog ─────────────────────────────────────────────── */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.45);
+}
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: 440px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 96px);
+  border: var(--hairline);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.4);
+}
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 10px 16px;
+  border-bottom: var(--hairline);
+  font-weight: 600;
+}
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 14px 16px 18px;
+  overflow-y: auto;
+}
+.dialog-section {
+  margin: 6px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+.dialog-section:first-child {
+  margin-top: 0;
+}
+.dialog-text {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-ink-faint);
+  user-select: text;
+}
+.param-label-wide {
+  width: auto;
+}
+.param-row[data-disabled] {
+  opacity: 0.5;
+  pointer-events: none;
+}

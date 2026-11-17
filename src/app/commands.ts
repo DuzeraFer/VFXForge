@@ -8,7 +8,7 @@ import { session } from "./session"
 export function prettyName(type: string): string {
   return type
     .split("_")
-    .map((word) => (word === "2d" ? "2D" : word.charAt(0).toUpperCase() + word.slice(1)))
+    .map((word) => (word === "2d" ? "2D" : word === "ai" ? "AI" : word.charAt(0).toUpperCase() + word.slice(1)))
     .join(" ")
 }
 

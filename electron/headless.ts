@@ -10,7 +10,8 @@ import { app, BrowserWindow } from "electron"
 import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync, rmSync } from "node:fs"
 import { basename, join, resolve } from "node:path"
 import { PNG } from "pngjs"
-import type { Job, JobImage, JobResult } from "../src/headless/jobs"
+import type { Job, JobAssets, JobImage, JobResult } from "../src/headless/jobs"
+import { assetsDir, readAsset, referencedAssets } from "./assets"
 
 export const HEADLESS_COMMANDS = ["render", "golden"] as const
 export type HeadlessCommand = (typeof HEADLESS_COMMANDS)[number]
@@ -38,6 +39,16 @@ function encodePng(image: JobImage): Buffer {
   const png = new PNG({ width: image.width, height: image.height })
   png.data = Buffer.from(image.data.buffer, image.data.byteOffset, image.data.byteLength)
   return PNG.sync.write(png, { colorType: 6 })
+}
+
+/** The image files a project refers to, read from the folder next to it. */
+function assetsOf(projectFile: string, projectText: string): JobAssets {
+  const assets: JobAssets = {}
+  for (const ref of referencedAssets(projectText)) {
+    const bytes = readAsset([assetsDir(projectFile)], ref)
+    if (bytes) assets[ref] = bytes.toString("base64")
+  }
+  return assets
 }
 
 async function createRunner(): Promise<(job: Job) => Promise<JobImage[]>> {
@@ -68,9 +79,11 @@ async function render(args: Args): Promise<number> {
   const frameFlag = args.flags.frame
   const frame = frameFlag === "sheet" ? "sheet" : Number(frameFlag ?? 0)
   if (frame !== "sheet" && !Number.isInteger(frame)) throw new Error(`--frame needs a whole number or "sheet".`)
+  const projectText = readFileSync(file, "utf8")
   const images = await run({
     kind: "render",
-    projectText: readFileSync(file, "utf8"),
+    projectText,
+    assets: assetsOf(file, projectText),
     graphId: typeof args.flags.graph === "string" ? args.flags.graph : undefined,
     target: typeof args.flags.target === "string" ? args.flags.target : undefined,
     frame,
@@ -108,7 +121,8 @@ async function golden(args: Args): Promise<number> {
     const suite = basename(file, ".vfxf")
     let images: JobImage[]
     try {
-      images = await run({ kind: "golden", projectText: readFileSync(join(casesDir, file), "utf8") })
+      const projectText = readFileSync(join(casesDir, file), "utf8")
+      images = await run({ kind: "golden", projectText, assets: assetsOf(join(casesDir, file), projectText) })
     } catch (error) {
       failures++
       console.log(`FAIL  ${suite}: ${error instanceof Error ? error.message : String(error)}`)

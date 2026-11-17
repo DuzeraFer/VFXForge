@@ -27,6 +27,8 @@ export type ToolCall = { callId: string; agent: { id: string; name: string }; to
 
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"]
 const TOOL_TIMEOUT_MS = 120_000
+/** Tools that wait on a service outside the app get longer. */
+const SLOW_TOOL_TIMEOUT_MS: Record<string, number> = { generate_image: 300_000 }
 /** Tried first; any free port is used if it is taken. */
 const DEFAULT_PORT = 47821
 
@@ -72,10 +74,11 @@ export function createToolRunner(getWindow: () => BrowserWindow | null): (call: 
         return
       }
       const callId = randomUUID()
+      const timeout = SLOW_TOOL_TIMEOUT_MS[call.tool] ?? TOOL_TIMEOUT_MS
       const timer = setTimeout(() => {
         waiting.delete(callId)
-        resolve({ content: [{ type: "text", text: `${call.tool} took longer than ${TOOL_TIMEOUT_MS / 1000} s and was abandoned.` }], isError: true })
-      }, TOOL_TIMEOUT_MS)
+        resolve({ content: [{ type: "text", text: `${call.tool} took longer than ${timeout / 1000} s and was abandoned.` }], isError: true })
+      }, timeout)
       waiting.set(callId, (result) => {
         clearTimeout(timer)
         resolve(result)

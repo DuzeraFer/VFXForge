@@ -19,6 +19,9 @@ import { ToolStrip, type ToolId } from "./components/ToolStrip"
 import { useDrag } from "./hooks/useDrag"
 import { useTheme } from "./hooks/useTheme"
 import { Toast } from "./components/Toast"
+import { Settings } from "./components/Settings"
+import { assets } from "./assetStore"
+import { generation } from "../ai/generation"
 import { documentTitle, session, useSession } from "./session"
 import { clamp, LEFT_PANEL, PREVIEW_SPLIT, resizeBy, RIGHT_COLUMN } from "./layout"
 
@@ -83,7 +86,16 @@ export function App(): ReactElement {
 
   const gpu = gpuState.status === "ready" ? gpuState.gpu : null
   const engine = useMemo(() => (gpu ? new Engine(gpu, registry) : null), [gpu])
-  useEffect(() => () => engine?.dispose(), [engine])
+  useEffect(() => () => engine?.destroy(), [engine])
+  // Image files of the project load in the background and show up when they arrive.
+  useEffect(() => {
+    assets.setEngine(engine)
+    return () => assets.setEngine(null)
+  }, [engine])
+  useEffect(() => {
+    if (engine) assets.sync(doc.project, doc.path)
+  }, [engine, doc.project, doc.path])
+  useEffect(() => void generation.refreshStatus(), [])
   useEffect(() => {
     setAgentEngine(engine)
     // Agents are served once there is something to render with (or it is clear there never will be).
@@ -183,6 +195,7 @@ export function App(): ReactElement {
           </div>
           <Timeline open={timelineOpen} onToggle={() => setTimelineOpen((v) => !v)} settings={activeGraph?.settings ?? null} />
           <Toast notice={doc.notice} />
+          <Settings />
         </EditorContext.Provider>
       )}
     </div>

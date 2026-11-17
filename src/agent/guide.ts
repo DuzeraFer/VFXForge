@@ -27,6 +27,12 @@ time -> two perlin noises (evolution driven by time.phase, so they loop) -> flam
 
 Set warp and erosion "tiling" to "clamp" so the flame does not wrap around the frame. Animated graphs need frames > 1 in the graph settings (set_graph).
 
+## Generated pictures (AI Image node)
+
+For shapes that are hard to build from noise and primitives (a hand-drawn smoke puff, a slash, a rune, a splash), add an \`ai_image\` node. Set its \`prompt\` with apply: describe one subject, its style ("flat cel-shaded", "soft painterly"), and what stays empty. \`mode\` "transparent" asks for a transparent background; "mask" asks for a bright subject on black and uses brightness as alpha, which suits anything you will band and recolor. The node outputs \`out\` (color) and \`mask\` (gray): feed \`mask\` to band, erosion or palette_remap like any other shape.
+
+The picture is drawn only when the artist presses Generate, or when you call \`generate_image\`, which uses their paid OpenAI account. That tool is off unless the artist turned it on, and is limited per session. If it is refused, leave the prompt in place and tell the artist it is ready for them to generate. Never loop on it: look at each result with render before asking for another.
+
 ## Rules of the road
 
 - Data types: gray, color, value. A gray input does not accept color. Value outputs (time, value, math) drive parameters with drive_param; they do not plug into image inputs.

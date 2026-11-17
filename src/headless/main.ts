@@ -9,6 +9,7 @@ import { Engine } from "../engine/evaluator"
 import { initGpu } from "../engine/gpu"
 import { compositeOver, renderFrame, renderSheet, resolveTarget, type Rgba8Image } from "../engine/render"
 import { registry } from "../nodes"
+import { decodeImage } from "../app/assets"
 import type { Job, JobImage, JobResult } from "./jobs"
 
 declare global {
@@ -47,6 +48,9 @@ function toJobImage(name: string, image: Rgba8Image): JobImage {
 async function run(job: Job): Promise<JobImage[]> {
   const engine = await getEngine()
   const project = parseProject(job.projectText)
+  for (const [ref, encoded] of Object.entries(job.assets ?? {})) {
+    if (!engine.hasAsset(ref)) engine.setAsset(ref, await decodeImage(Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0))))
+  }
 
   if (job.kind === "render") {
     const graph = pickGraph(project, job.graphId)

@@ -60,6 +60,9 @@ function stable(value: unknown): string {
   return JSON.stringify(value)
 }
 
+/** An image file of the project, uploaded as it is displayed (8-bit, straight alpha). */
+type Asset = { texture: GPUTexture; width: number; height: number; version: number }
+
 type CacheEntry = { result: ImageResult; bytes: number; lastUsed: number }
 
 type CompiledNode = { def: ResolvedNodeDef; layout: UniformLayout }
@@ -92,6 +95,9 @@ export class Engine {
   private readonly textureGroups = new Map<number, GPUBindGroupLayout>()
   private pendingChecks: Promise<void>[] = []
   private readonly shaderErrors = new Map<string, string>()
+  private readonly assets = new Map<string, Asset>()
+  private assetVersion = 0
+  private readonly assetListeners = new Set<() => void>()
 
   /** Memo for one `evaluate` / `keyOf` call tree: keys and values per frame. */
   private memoFrame = -1
@@ -134,6 +140,44 @@ export class Engine {
     }
     this.resetMemo(-1)
     return this.resolved
+  }
+
+  /**
+   * Gives the engine the pixels of an image file (or takes them away with
+   * null). Nodes that read it re-render: the version is part of their key.
+   */
+  setAsset(ref: string, image: ImageBitmap | null): void {
+    this.assets.get(ref)?.texture.destroy()
+    this.assets.delete(ref)
+    if (image) {
+      const { device } = this.gpu
+      const texture = device.createTexture({
+        label: `asset:${ref}`,
+        size: [image.width, image.height],
+        format: "rgba8unorm",
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT
+      })
+      device.queue.copyExternalImageToTexture({ source: image }, { texture, premultipliedAlpha: false }, [image.width, image.height])
+      this.assets.set(ref, { texture, width: image.width, height: image.height, version: ++this.assetVersion })
+    }
+    this.resetMemo(-1)
+    for (const listener of [...this.assetListeners]) listener()
+  }
+
+  hasAsset(ref: string): boolean {
+    return this.assets.has(ref)
+  }
+
+  /** Called whenever an image file arrives or goes away. Returns a function that stops listening. */
+  onAssets(listener: () => void): () => void {
+    this.assetListeners.add(listener)
+    return () => this.assetListeners.delete(listener)
+  }
+
+  private assetOf(node: Node, def: ResolvedNodeDef): Asset | undefined {
+    if (def.asset === undefined) return undefined
+    const ref = node.params[def.asset]
+    return typeof ref === "string" ? this.assets.get(ref) : undefined
   }
 
   get problems(): Problem[] {
@@ -252,7 +296,8 @@ export class Engine {
           inputs: inputKeys,
           size: [width, height],
           seed: def.seeded ? this.projectSeed : 0,
-          time: def.usesTime ? [time.frame % time.frames, time.frames, time.fps] : null
+          time: def.usesTime ? [time.frame % time.frames, time.frames, time.fps] : null,
+          asset: this.assetOf(node, def)?.version ?? 0
         })
       )
     }
@@ -296,6 +341,12 @@ export class Engine {
       const from = parseSocketRef(source)!
       inputs[name] = this.evaluateFrame(from.nodeId, from.socket, frame)
       bound[name] = inputs[name].type
+    }
+
+    const asset = this.assetOf(node, def)
+    if (asset) {
+      inputs.asset = { texture: asset.texture, type: "color", width: asset.width, height: asset.height, key: "" }
+      bound.asset = "color"
     }
 
     const type = this.resolved!.outputTypes.get(`${nodeId}.${output}`) as "gray" | "color"
@@ -511,6 +562,14 @@ export class Engine {
     for (const entry of this.cache.values()) entry.result.texture.destroy()
     this.cache.clear()
     this.cachedBytes = 0
+  }
+
+  /** Frees everything, image files included. The engine is not used again. */
+  destroy(): void {
+    this.dispose()
+    for (const asset of this.assets.values()) asset.texture.destroy()
+    this.assets.clear()
+    this.assetListeners.clear()
   }
 }
 
