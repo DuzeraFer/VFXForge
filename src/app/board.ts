@@ -1,8 +1,8 @@
 /** Editor commands for the reference board, comment threads and snapshots, and pictures of the project for the UI. */
 
 import { useEffect, useState } from "react"
-import { addComment, addReference, addSnapshot, BoardError, removeComment, removeReference, removeSnapshot, replyToComment, resolveComment, updateReference } from "../doc/board"
-import type { Op } from "../doc"
+import { addComment, addReference, addSnapshot, BoardError, removeComment, removeFrame, removeGradient, removeReference, removeSnapshot, replyToComment, resolveComment, saveGradient, updateFrame, updateReference } from "../doc/board"
+import type { GradientStop, Op } from "../doc"
 import type { Rgba8Image } from "../engine/render"
 import { session } from "./session"
 
@@ -64,6 +64,18 @@ export async function takeSnapshot(image: Rgba8Image, shot: { graphId: string; t
   }
 }
 export const deleteSnapshot = (id: string): unknown => run("Delete snapshot", () => ({ op: removeSnapshot(project(), id), value: true }))
+
+export const saveProjectGradient = (name: string, stops: readonly GradientStop[]): boolean => run("Save gradient", () => ({ op: saveGradient(project(), name, stops), value: true })) === true
+export const deleteProjectGradient = (name: string): unknown => run("Remove gradient", () => ({ op: removeGradient(project(), name), value: true }))
+
+const activeGraph = (): import("../doc").Graph => {
+  const { project: p, activeGraphId } = session.getState()
+  const graph = p.graphs.find((g) => g.id === activeGraphId)
+  if (!graph) throw new BoardError("No graph is open.")
+  return graph
+}
+export const editFrame = (id: string, patch: { title?: string; note?: string; color?: string }): unknown => run("Edit frame", () => ({ op: updateFrame(activeGraph(), id, patch), value: true }))
+export const deleteFrame = (id: string): unknown => run("Remove frame", () => ({ op: removeFrame(activeGraph(), id), value: true }))
 
 // ── Pictures of the project, for <img> ────────────────────
 

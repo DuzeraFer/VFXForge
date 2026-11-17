@@ -1,0 +1,343 @@
+{
+ "version": 1,
+ "name": "leftovers",
+ "seed": 3,
+ "graphs": [
+  {
+   "id": "g1",
+   "name": "multi_blend",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "bg",
+     "type": "uniform_color",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "color": [
+       0.1,
+       0.2,
+       0.6,
+       1
+      ]
+     }
+    },
+    {
+     "id": "s1",
+     "type": "shape",
+     "position": [
+      0,
+      160
+     ],
+     "params": {
+      "shape": "circle",
+      "size": [
+       0.35,
+       0.35
+      ]
+     }
+    },
+    {
+     "id": "s2",
+     "type": "polygon",
+     "position": [
+      0,
+      320
+     ],
+     "params": {
+      "sides": 3
+     }
+    },
+    {
+     "id": "r",
+     "type": "reroute",
+     "position": [
+      160,
+      330
+     ],
+     "params": {}
+    },
+    {
+     "id": "m",
+     "type": "multi_blend",
+     "position": [
+      260,
+      120
+     ],
+     "params": {
+      "mode": "screen",
+      "opacities": [
+       1,
+       0.8,
+       1,
+       0.5
+      ]
+     }
+    },
+    {
+     "id": "m2",
+     "type": "multi_blend",
+     "position": [
+      260,
+      320
+     ],
+     "params": {
+      "mode": "add",
+      "opacities": [
+       1,
+       1
+      ]
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      440,
+      120
+     ],
+     "params": {
+      "name": "stack"
+     }
+    },
+    {
+     "id": "o2",
+     "type": "output",
+     "position": [
+      440,
+      320
+     ],
+     "params": {
+      "name": "added"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "bg.out",
+     "to": "m.layer1"
+    },
+    {
+     "from": "s1.out",
+     "to": "m.layer2"
+    },
+    {
+     "from": "s2.out",
+     "to": "r.in"
+    },
+    {
+     "from": "r.out",
+     "to": "m.layer4"
+    },
+    {
+     "from": "s1.out",
+     "to": "m2.layer2"
+    },
+    {
+     "from": "r.out",
+     "to": "m2.layer5"
+    },
+    {
+     "from": "m.out",
+     "to": "o.in"
+    },
+    {
+     "from": "m2.out",
+     "to": "o2.in"
+    }
+   ],
+   "frames": [
+    {
+     "id": "f1",
+     "title": "Shapes",
+     "nodeIds": [
+      "s1",
+      "s2"
+     ],
+     "color": "blue"
+    }
+   ],
+   "exposed": []
+  },
+  {
+   "id": "g2",
+   "name": "image_sequence",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 6,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "a",
+     "type": "image_sequence",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "file": "images/5e90e0ce00000001.png",
+      "cols": 2,
+      "rows": 2,
+      "count": 4,
+      "cell": [
+       32,
+       32
+      ]
+     }
+    },
+    {
+     "id": "b",
+     "type": "image_sequence",
+     "position": [
+      0,
+      160
+     ],
+     "params": {
+      "file": "images/5e90e0ce00000001.png",
+      "cols": 2,
+      "rows": 2,
+      "count": 4,
+      "cell": [
+       32,
+       32
+      ],
+      "playback": "ping_pong",
+      "offset": 1
+     }
+    },
+    {
+     "id": "c",
+     "type": "image_sequence",
+     "position": [
+      0,
+      320
+     ],
+     "params": {
+      "file": "images/5e90e0ce00000001.png",
+      "cols": 2,
+      "rows": 2,
+      "count": 4,
+      "cell": [
+       32,
+       32
+      ],
+      "fit": true
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "loop"
+     }
+    },
+    {
+     "id": "o2",
+     "type": "output",
+     "position": [
+      200,
+      160
+     ],
+     "params": {
+      "name": "ping_pong"
+     }
+    },
+    {
+     "id": "o3",
+     "type": "output",
+     "position": [
+      200,
+      320
+     ],
+     "params": {
+      "name": "fit"
+     }
+    },
+    {
+     "id": "o4",
+     "type": "output",
+     "position": [
+      200,
+      480
+     ],
+     "params": {
+      "name": "alpha"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "a.out",
+     "to": "o.in"
+    },
+    {
+     "from": "b.out",
+     "to": "o2.in"
+    },
+    {
+     "from": "c.out",
+     "to": "o3.in"
+    },
+    {
+     "from": "a.alpha",
+     "to": "o4.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  }
+ ],
+ "functions": [],
+ "gradients": [
+  {
+   "id": "project",
+   "name": "This project",
+   "gradients": [
+    {
+     "id": "gr1",
+     "name": "Fire",
+     "stops": [
+      {
+       "position": 0,
+       "color": [
+        0,
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "position": 1,
+       "color": [
+        1,
+        0.5,
+        0,
+        1
+       ],
+       "hardness": 1
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "references": [],
+ "comments": []
+}

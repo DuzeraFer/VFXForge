@@ -8,7 +8,8 @@ import { assetPixels, snapshotOp } from "../app/board"
 import { planFunctionFromNodes } from "../app/functions"
 import { offerVariations } from "../app/variations"
 import { session } from "../app/session"
-import { addComment, addReference, applyOps, BatchError, BoardError, importFunctionOps, nextId, replyToComment, threadsOf, type Graph, type Op, type ParamValue, type Preset, type Speaker } from "../doc"
+import { addComment, addReference, applyOps, BatchError, BoardError, addFrame, importFunctionOps, nextId, projectGradients, removeFrame, removeGradient, replyToComment, saveGradient, threadsOf, type GradientStop, type Graph, type Op, type ParamValue, type Preset, type Project, type Speaker } from "../doc"
+import { gradientFromSamples, GRADIENT_PRESETS, sampleLine } from "../inspector/gradient"
 import { contactSheet, gridColumns, MAX_VARIATIONS, seedVariations, variantGraph, type Variation } from "../engine/variations"
 import { functionType, usesGraph } from "../engine/functions"
 import { recipe, recipes } from "../library/recipes"
@@ -17,7 +18,7 @@ import { toRgba8 } from "../engine/evaluator"
 import { measureFrame, measureMotion } from "../engine/measure"
 import { compositeOver, defaultResultName, isResultNode, resolveTarget, sheetLayout, type Rgba8Image, type Target } from "../engine/render"
 import { resolveGraph, type Problem } from "../engine/validate"
-import type { ResolvedNodeDef } from "../engine/nodeDef"
+import { MAX_GRADIENT_STOPS, type ResolvedNodeDef } from "../engine/nodeDef"
 import { registry } from "../nodes"
 import { formatValue, graphText, graphTextOps, GraphTextError, parseGraphText } from "./graphText"
 import { generateFor } from "../ai/generation"
@@ -138,12 +139,15 @@ const picture = (image: Rgba8Image): ToolContent => ({
 const PROBLEMS_THAT_BLOCK: ReadonlySet<Problem["code"]> = new Set(["unknown_type", "unknown_param", "bad_param", "unknown_socket", "type_mismatch", "bad_driver", "bad_function"])
 
 /** Agent-facing ops to document ops, and the nodes they touch. */
-function translate(graph: Graph, raw: unknown[], projectSeed: number): { ops: Op[]; touched: string[]; added: { id: string; placed: boolean }[] } {
+function translate(graph: Graph, raw: unknown[], project: Project): { ops: Op[]; touched: string[]; added: { id: string; placed: boolean }[] } {
   const ops: Op[] = []
   const touched = new Set<string>()
   const added: { id: string; placed: boolean }[] = []
   const taken = graph.nodes.map((n) => n.id)
   const nodeOf = (ref: unknown): string => String(ref).split(".")[0]
+  // Gradient ops replace the whole list, so each one builds on the one before it in this batch.
+  let gradients = project.gradients
+  let frames = graph.frames
 
   raw.forEach((item, index) => {
     const op = item as Record<string, unknown>
@@ -224,7 +228,7 @@ function translate(graph: Graph, raw: unknown[], projectSeed: number): { ops: Op
         if (typeof op.name === "string" || Object.keys(settings).length > 0 || Object.keys(extra).length > 0) {
           ops.push({ op: "set_graph", graphId: graph.id, ...(typeof op.name === "string" ? { name: op.name } : {}), ...(Object.keys(settings).length > 0 ? { settings } : {}), ...extra })
         }
-        if (typeof op.seed === "number" && op.seed !== projectSeed) ops.push({ op: "set_project", seed: op.seed })
+        if (typeof op.seed === "number" && op.seed !== project.seed) ops.push({ op: "set_project", seed: op.seed })
         break
       }
       case "expose_param": {
@@ -253,8 +257,31 @@ function translate(graph: Graph, raw: unknown[], projectSeed: number): { ops: Op
         ops.push({ op: "set_presets", graphId: graph.id, presets: op.presets as Preset[] })
         break
       }
-      case "add_comment_box":
-        throw new ToolError(`${where}: "${String(op.op)}" is not available yet.`)
+      case "save_gradient":
+      case "remove_gradient": {
+        const now = { ...project, gradients }
+        const next = board(() => (op.op === "save_gradient" ? saveGradient(now, need("name"), gradientStops(op.stops, where)) : removeGradient(now, need("name"))))
+        if (next.op === "set_gradients") gradients = next.gradients
+        ops.push(next)
+        break
+      }
+      case "add_frame":
+      case "add_comment_box": {
+        if (!Array.isArray(op.nodeIds)) throw new ToolError(`${where} (add_frame) needs "nodeIds": the nodes the frame goes around.`)
+        const ids = (op.nodeIds as unknown[]).map(String)
+        // Nodes added earlier in this batch are not in the graph yet; the document checks those when the batch is applied.
+        const known = { ...graph, frames, nodes: [...graph.nodes, ...added.filter((a) => ids.includes(a.id) && !graph.nodes.some((n) => n.id === a.id)).map((a) => ({ id: a.id }) as Graph["nodes"][number])] }
+        const next = board(() => addFrame(known, ids, typeof op.title === "string" ? op.title : "Frame", { note: typeof op.note === "string" ? op.note : undefined, color: typeof op.color === "string" ? op.color : undefined }))
+        if (next.op.op === "set_frames") frames = next.op.frames
+        ops.push(next.op)
+        break
+      }
+      case "remove_frame": {
+        const next = board(() => removeFrame({ ...graph, frames }, need("id")))
+        if (next.op === "set_frames") frames = next.frames
+        ops.push(next)
+        break
+      }
       default:
         throw new ToolError(`${where}: unknown operation "${String(op.op)}". See the apply tool description for the list.`)
     }
@@ -262,12 +289,17 @@ function translate(graph: Graph, raw: unknown[], projectSeed: number): { ops: Op
   return { ops, touched: [...touched], added }
 }
 
+function gradientStops(raw: unknown, where: string): GradientStop[] {
+  if (!Array.isArray(raw) || raw.length === 0) throw new ToolError(`${where} needs "stops": a list of { position, color: [r, g, b, a], hardness? }.`)
+  return raw as GradientStop[]
+}
+
 function apply(agent: AgentIdentity, args: Args): ToolResult {
   const graph = graphOf(args)
   if (!Array.isArray(args.ops) || args.ops.length === 0) throw new ToolError('apply needs "ops": a list with at least one operation.')
   const label = typeof args.label === "string" && args.label.trim() ? args.label.trim() : "Agent edit"
   const { project } = session.getState()
-  const { ops, touched, added } = translate(graph, args.ops, project.seed)
+  const { ops, touched, added } = translate(graph, args.ops, project)
 
   // Dry run: learn where the new nodes go and whether the result is valid, before the artist sees anything.
   let after: Graph
@@ -580,6 +612,29 @@ async function addReferenceTool(agent: AgentIdentity, args: Args): Promise<ToolR
   return text(`Added it to the reference board as ${id}.`)
 }
 
+function listGradients(): ToolResult {
+  const saved = projectGradients(session.getState().project)
+  return json({
+    project: saved.map((g) => ({ name: g.name, stops: g.stops })),
+    builtIn: GRADIENT_PRESETS.map((g) => ({ name: g.name, stops: g.stops })),
+    next: 'Use one by passing its stops as a gradient parameter in set_params. Save one for the artist with the apply op { "op": "save_gradient", "name", "stops" }.'
+  })
+}
+
+const point = (raw: unknown, key: string): [number, number] => {
+  if (!Array.isArray(raw) || raw.length !== 2 || raw.some((v) => typeof v !== "number" || v < 0 || v > 1)) throw new ToolError(`sample_gradient needs "${key}": [x, y], each from 0 to 1, measured from the top left of the picture.`)
+  return raw as [number, number]
+}
+
+/** The colors along a line across a reference, as gradient stops. */
+async function sampleGradientTool(args: Args): Promise<ToolResult> {
+  const found = boardPicture(args.referenceId ?? args.id)
+  const pixels = await pixelsOf(found.image, found.label)
+  const maxStops = typeof args.maxStops === "number" ? Math.min(MAX_GRADIENT_STOPS, Math.max(2, Math.round(args.maxStops))) : 8
+  const stops = gradientFromSamples(sampleLine(pixels, point(args.from, "from"), point(args.to, "to")), maxStops)
+  return json({ stops, next: "Pass these stops as a gradient parameter in set_params (palette_remap, gradient). Flat cel colors come back as hard steps (hardness 1)." })
+}
+
 async function renderCompare(args: Args): Promise<ToolResult> {
   const graph = graphOf(args)
   const target = targetOf(graph, args)
@@ -765,6 +820,10 @@ export async function runTool(agent: AgentIdentity, name: string, args: Args): P
         return await getReference(args)
       case "add_reference":
         return await addReferenceTool(agent, args)
+      case "list_gradients":
+        return listGradients()
+      case "sample_gradient":
+        return await sampleGradientTool(args)
       case "render_compare":
         return await renderCompare(args)
       case "list_comments":

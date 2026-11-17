@@ -9,7 +9,9 @@
 import {
   createGraph,
   parseSocketRef,
+  type CommentBox,
   type CommentThread,
+  type GradientLib,
   type Reference,
   type Snapshot,
   type ExposedParam,
@@ -35,6 +37,10 @@ export type Op =
   | { op: "set_references"; references: Reference[] }
   | { op: "set_comments"; comments: CommentThread[] }
   | { op: "set_snapshots"; snapshots: Snapshot[] }
+  /** The frames (titled boxes around groups of nodes) of a graph. A frame with no nodes is dropped. */
+  | { op: "set_frames"; graphId: string; frames: CommentBox[] }
+  /** The project's saved gradients. */
+  | { op: "set_gradients"; gradients: GradientLib[] }
   /** `description: null` removes it. */
   | { op: "set_graph"; graphId: string; name?: string; settings?: Partial<GraphSettings>; function?: boolean; description?: string | null }
   /** Shows a node's parameter at graph level, under the name `as` (default: the parameter's name). On a function it becomes a parameter of the function's node. */
@@ -323,6 +329,36 @@ export function applyOp(project: Project, op: Op, options: ApplyOptions = {}): O
       return { project: next, inverse: [{ op: "set_snapshots", snapshots: project.snapshots ?? [] }] }
     }
 
+    case "set_gradients": {
+      uniqueIds(op.gradients, "gradient library")
+      for (const lib of op.gradients) {
+        if (typeof lib.name !== "string" || !Array.isArray(lib.gradients)) throw new OpError("invalid_value", "A gradient library needs a name and a list of gradients.")
+        uniqueIds(lib.gradients, "gradient")
+        for (const g of lib.gradients) {
+          if (typeof g.name !== "string" || g.name.trim() === "" || !Array.isArray(g.stops) || g.stops.length === 0) throw new OpError("invalid_value", "A gradient needs a name and at least one stop.")
+          for (const stop of g.stops) {
+            if (typeof stop?.position !== "number" || !Array.isArray(stop.color) || stop.color.length !== 4 || stop.color.some((c) => typeof c !== "number")) {
+              throw new OpError("invalid_value", `Gradient "${g.name}": every stop needs a position and a color [r, g, b, a].`)
+            }
+          }
+        }
+      }
+      return { project: { ...project, gradients: op.gradients.map((lib) => ({ ...lib, gradients: lib.gradients.map((g) => ({ ...g, stops: g.stops.map((stop) => ({ ...stop })) })) })) }, inverse: [{ op: "set_gradients", gradients: project.gradients }] }
+    }
+
+    case "set_frames": {
+      const { graph, index } = findGraph(project, op.graphId)
+      uniqueIds(op.frames, "frame")
+      const known = new Set(graph.nodes.map((n) => n.id))
+      for (const frame of op.frames) {
+        if (typeof frame.title !== "string" || !Array.isArray(frame.nodeIds)) throw new OpError("invalid_value", "A frame needs a title and a list of node ids.")
+        const missing = frame.nodeIds.find((id) => !known.has(id))
+        if (missing !== undefined) throw new OpError("unknown_node", `Frame "${frame.title}": there is no node "${missing}" in graph "${graph.id}".`)
+      }
+      const frames = op.frames.filter((f) => f.nodeIds.length > 0).map((f) => ({ ...f, nodeIds: [...new Set(f.nodeIds)] }))
+      return { project: withGraph(project, index, { ...graph, frames }), inverse: [{ op: "set_frames", graphId: graph.id, frames: graph.frames }] }
+    }
+
     case "set_graph": {
       const { graph, index } = findGraph(project, op.graphId)
       const inverse: Op = { op: "set_graph", graphId: graph.id }
@@ -467,10 +503,11 @@ export function applyOp(project: Project, op: Op, options: ApplyOptions = {}): O
           return bump({ ...other, driven })
         })
       const exposed = graph.exposed.filter((e) => e.nodeId !== node.id)
-      const frames = graph.frames.map((f) =>
-        f.nodeIds.includes(node.id) ? { ...f, nodeIds: f.nodeIds.filter((n) => n !== node.id) } : f
-      )
-      if (exposed.length !== graph.exposed.length || frames.some((f, i) => f !== graph.frames[i])) {
+      // A frame that loses its last node goes with it.
+      const frames = graph.frames
+        .map((f) => (f.nodeIds.includes(node.id) ? { ...f, nodeIds: f.nodeIds.filter((n) => n !== node.id) } : f))
+        .filter((f) => f.nodeIds.length > 0)
+      if (exposed.length !== graph.exposed.length || frames.length !== graph.frames.length || frames.some((f, i) => f !== graph.frames[i])) {
         // Rare enough that restoring the whole lists is simpler than per-item ops.
         return {
           project: withGraph(project, index, { ...graph, nodes, links, exposed, frames }),

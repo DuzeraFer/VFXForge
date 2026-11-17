@@ -1,6 +1,6 @@
 /** Editor commands: each builds ops and applies them through the session as one undoable step. */
 
-import { autoLayoutOps, nextId, parseSocketRef, type Graph, type Node, type Op } from "../doc"
+import { addFrame, autoLayoutOps, nextId, parseSocketRef, type Graph, type Node, type Op } from "../doc"
 import type { DataType, InputType, ResolvedNodeDef } from "../engine/nodeDef"
 import { functionIdOf } from "../engine/functions"
 import { registry } from "../nodes"
@@ -184,4 +184,34 @@ export function addGraph(): void {
   const id = nextId(project.graphs.map((g) => g.id), "g")
   const created = session.apply([{ op: "add_graph", id, name: `Graph ${project.graphs.length + 1}` }], "Add graph")
   if (created) session.setActiveGraph(id)
+}
+
+/** Puts a frame around the selected nodes. */
+export function frameSelection(): string | null {
+  const { project, activeGraphId, selection } = session.getState()
+  const graph = project.graphs.find((g) => g.id === activeGraphId)
+  if (!graph) return null
+  if (selection.length === 0) {
+    session.say("Select the nodes the frame should go around first.")
+    return null
+  }
+  const { op, id } = addFrame(graph, selection, "Frame")
+  return session.apply([op], "Frame nodes") ? id : null
+}
+
+/** Adds a reroute point on the wire that ends at `to`, at a place on the canvas. */
+export function insertReroute(to: string, position: [number, number]): string | null {
+  const { project, activeGraphId } = session.getState()
+  const graph = project.graphs.find((g) => g.id === activeGraphId)
+  const link = graph?.links.find((l) => l.to === to)
+  if (!graph || !link) return null
+  const id = nextId(graph.nodes.map((n) => n.id), "n")
+  const ops: Op[] = [
+    { op: "add_node", graphId: graph.id, type: "reroute", id, position: [Math.round(position[0] / 8) * 8 - 8, Math.round(position[1] / 8) * 8 - 8] },
+    { op: "connect", graphId: graph.id, from: link.from, to: `${id}.in` },
+    { op: "connect", graphId: graph.id, from: `${id}.out`, to }
+  ]
+  if (!session.apply(ops, "Add reroute point")) return null
+  session.select([id])
+  return id
 }

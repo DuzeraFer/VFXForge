@@ -6,7 +6,7 @@
  */
 
 import type { Op } from "./ops"
-import type { CommentMessage, CommentThread, Project, Reference, Snapshot } from "./types"
+import type { CommentBox, CommentMessage, CommentThread, Gradient, GradientStop, Graph, Project, Reference, Snapshot } from "./types"
 
 export class BoardError extends Error {}
 
@@ -125,4 +125,71 @@ export function removeSnapshot(project: Project, id: string): Op {
   const all = project.snapshots ?? []
   if (!all.some((s) => s.id === id)) throw new BoardError(`There is no snapshot "${id}".`)
   return { op: "set_snapshots", snapshots: all.filter((s) => s.id !== id) }
+}
+
+// ── Gradients ─────────────────────────────────────────────
+
+const PROJECT_LIBRARY = "project"
+
+/** The gradients saved with the project, in the order they were saved. */
+export function projectGradients(project: Project): Gradient[] {
+  return project.gradients.flatMap((lib) => lib.gradients)
+}
+
+/** Saves a gradient under a name. A gradient of that name is replaced. */
+export function saveGradient(project: Project, name: string, stops: readonly GradientStop[]): Op {
+  const title = clean(name, 60)
+  if (!title) throw new BoardError("Give the gradient a name.")
+  if (stops.length === 0) throw new BoardError("A gradient needs at least one stop.")
+  if (stops.length > 16) throw new BoardError("A gradient holds at most 16 stops.")
+  const copy = stops.map((stop) => ({ ...stop, color: [...stop.color] as GradientStop["color"] }))
+  const home = project.gradients.find((lib) => lib.gradients.some((g) => g.name === title)) ?? project.gradients.find((lib) => lib.id === PROJECT_LIBRARY)
+  if (!home) return { op: "set_gradients", gradients: [...project.gradients, { id: PROJECT_LIBRARY, name: "This project", gradients: [{ id: "gr1", name: title, stops: copy }] }] }
+  const existing = home.gradients.find((g) => g.name === title)
+  const gradients = existing ? home.gradients.map((g) => (g === existing ? { ...g, stops: copy } : g)) : [...home.gradients, { id: freshId(projectGradients(project), "gr"), name: title, stops: copy }]
+  return { op: "set_gradients", gradients: project.gradients.map((lib) => (lib === home ? { ...lib, gradients } : lib)) }
+}
+
+export function removeGradient(project: Project, name: string): Op {
+  if (!projectGradients(project).some((g) => g.name === name)) throw new BoardError(`The project has no gradient called "${name}".`)
+  return { op: "set_gradients", gradients: project.gradients.map((lib) => ({ ...lib, gradients: lib.gradients.filter((g) => g.name !== name) })).filter((lib) => lib.gradients.length > 0) }
+}
+
+// ── Frames ────────────────────────────────────────────────
+
+/** Colors a frame can have; the names are theme tokens, not values. */
+export const FRAME_COLORS = ["gray", "blue", "green", "amber", "red", "violet"] as const
+
+/** Puts a titled frame around nodes of a graph. */
+export function addFrame(graph: Graph, nodeIds: readonly string[], title: string, extra: { note?: string; color?: string } = {}): { op: Op; id: string } {
+  const ids = [...new Set(nodeIds)]
+  if (ids.length === 0) throw new BoardError("Select the nodes the frame should go around.")
+  const missing = ids.find((id) => !graph.nodes.some((n) => n.id === id))
+  if (missing !== undefined) throw new BoardError(`There is no node "${missing}" in graph "${graph.id}".`)
+  if (extra.color !== undefined && !(FRAME_COLORS as readonly string[]).includes(extra.color)) throw new BoardError(`A frame's color is one of: ${FRAME_COLORS.join(", ")}.`)
+  const id = freshId(graph.frames, "f")
+  const note = extra.note ? clean(extra.note, 400) : ""
+  const frame: CommentBox = { id, title: clean(title, 80) || "Frame", nodeIds: ids, ...(extra.color ? { color: extra.color } : {}), ...(note ? { note } : {}) }
+  return { op: { op: "set_frames", graphId: graph.id, frames: [...graph.frames, frame] }, id }
+}
+
+export function updateFrame(graph: Graph, id: string, patch: { title?: string; note?: string; color?: string; nodeIds?: readonly string[] }): Op {
+  const frame = graph.frames.find((f) => f.id === id)
+  if (!frame) throw new BoardError(`There is no frame "${id}" in graph "${graph.id}".`)
+  if (patch.color !== undefined && !(FRAME_COLORS as readonly string[]).includes(patch.color)) throw new BoardError(`A frame's color is one of: ${FRAME_COLORS.join(", ")}.`)
+  const next: CommentBox = { ...frame }
+  if (patch.title !== undefined) next.title = clean(patch.title, 80) || "Frame"
+  if (patch.color !== undefined) next.color = patch.color
+  if (patch.nodeIds !== undefined) next.nodeIds = [...new Set(patch.nodeIds)]
+  if (patch.note !== undefined) {
+    const note = clean(patch.note, 400)
+    if (note) next.note = note
+    else delete next.note
+  }
+  return { op: "set_frames", graphId: graph.id, frames: graph.frames.map((f) => (f === frame ? next : f)) }
+}
+
+export function removeFrame(graph: Graph, id: string): Op {
+  if (!graph.frames.some((f) => f.id === id)) throw new BoardError(`There is no frame "${id}" in graph "${graph.id}".`)
+  return { op: "set_frames", graphId: graph.id, frames: graph.frames.filter((f) => f.id !== id) }
 }

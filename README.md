@@ -6,7 +6,7 @@ The full spec lives in [`docs/`](docs/README.md). Build order and acceptance che
 
 ## Status
 
-**Phase 8 — Working with Claude, round two.** A **reference board** for pictures of the look you want, with a note on each. **Comments** on nodes that Claude reads, acts on and answers. **Snapshots** and a **Compare** split in the Preview, against a snapshot or a reference. **Variations**: Claude renders several versions and you click the one you like; the Seeds button does it for eight seeds. Before it: functions, pinned parameters, presets and seven recipes (Phase 7), 77 node types (Phase 6), export and the Unity link (Phase 5), sprite sheets (Phase 4), the AI Image node (Phase 3b), Claude editing the live graph through MCP (Phase 3) and the dark "Bench" editor (Phase 2). Next: depth and polish.
+**Phase 8 — Working with Claude, round two.** A **reference board** for pictures of the look you want, with a note on each. **Comments** on nodes that Claude reads, acts on and answers. **Snapshots** and a **Compare** split in the Preview, against a snapshot or a reference. **Variations**: Claude renders several versions and you click the one you like; the Seeds button does it for eight seeds. Since then: gradients saved with the project and read from a reference picture, **frames** around groups of nodes (G), **reroute points** on wires (double-click a wire), **Multi Blend** and **Image Sequence** nodes, and **hotkeys** you can change in Settings. Before it: functions, pinned parameters, presets and seven recipes (Phase 7), 80 node types (77 from Phase 6), export and the Unity link (Phase 5), sprite sheets (Phase 4), the AI Image node (Phase 3b), Claude editing the live graph through MCP (Phase 3) and the dark "Bench" editor (Phase 2). Next: depth and polish.
 
 ![Claude offers four variations to pick from](docs/progress/phase-8-variations.png)
 
@@ -60,7 +60,7 @@ Then ask Claude Code something like "build a cel-shaded fire in VFXForge". The a
 - If it is not, the same command works without a window: `VFXForge.exe mcp project.vfxf` opens that project, and `save_project` writes it back.
 - Clients that speak HTTP can connect to the `url` in `mcp.json` with the header `Authorization: Bearer <token>`.
 
-Tools: `get_guide`, `get_basic_info`, `get_selection`, `get_graph`, `get_node`, `list_node_types`, `get_history`, `render`, `render_frames`, `measure`, `apply`, `create_graph`, `apply_text`, `list_functions`, `add_function`, `create_function`, `list_references`, `get_reference`, `add_reference`, `render_compare`, `list_comments`, `comment`, `reply`, `snapshot`, `render_variations`, `generate_image`, `export`, `set_selection`, `save_project`, `finish_working`. See `docs/05-ai-integration.md`.
+Tools: `get_guide`, `get_basic_info`, `get_selection`, `get_graph`, `get_node`, `list_node_types`, `get_history`, `render`, `render_frames`, `measure`, `apply`, `create_graph`, `apply_text`, `list_functions`, `add_function`, `create_function`, `list_references`, `get_reference`, `add_reference`, `render_compare`, `list_gradients`, `sample_gradient`, `list_comments`, `comment`, `reply`, `snapshot`, `render_variations`, `generate_image`, `export`, `set_selection`, `save_project`, `finish_working`. See `docs/05-ai-integration.md`.
 
 ![Cel fire sheet rendered by the engine](docs/progress/phase-1-cel-fire.png)
 

@@ -44,6 +44,7 @@ export function graphText(graph: Graph, registry: NodeRegistry, projectSeed: num
   const header = `graph ${graph.id} "${graph.name}"  ${s.width}x${s.height}  frames=${s.frames} fps=${s.fps}${s.loop ? " loop" : ""}  seed=${projectSeed}`
   const head = [graph.function ? `${header}  function${graph.description ? `: ${graph.description}` : ""}` : header]
   if (graph.exposed.length > 0) head.push(`exposed: ${graph.exposed.map((e) => (e.as === e.param ? `${e.nodeId}.${e.param}` : `${e.as}=${e.nodeId}.${e.param}`)).join(", ")}`)
+  for (const frame of graph.frames) head.push(`frame ${frame.id} "${frame.title}": ${frame.nodeIds.join(", ")}${frame.note ? `  (${frame.note})` : ""}`)
   if (graph.presets && graph.presets.length > 0) head.push(`presets: ${graph.presets.map((p) => p.name).join(", ")}`)
   if (graph.nodes.length === 0) return `${head.join("\n")}\n(empty)`
   const idWidth = Math.max(...graph.nodes.map((n) => n.id.length))
@@ -114,7 +115,7 @@ export function parseGraphText(text: string, registry: NodeRegistry): TextNode[]
   for (let n = 0; n < lines.length; n++) {
     const line = lines[n].trim()
     const where = `Line ${n + 1}`
-    if (line === "" || line === "(empty)" || line.startsWith("#") || /^(graph\s|exposed:|presets:)/.test(line)) continue
+    if (line === "" || line === "(empty)" || line.startsWith("#") || /^(graph\s|exposed:|presets:|frame\s)/.test(line)) continue
     if (line === "problems:") break
     const [id, type, ...rest] = tokens(line, where)
     if (!type) throw new GraphTextError(`${where}: expected "id type params…", got "${line}".`)

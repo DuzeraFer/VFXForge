@@ -50,6 +50,7 @@ Kept small on purpose: one write tool that takes a list of operations is easier 
 |---|---|
 | `render(target, options)` | PNG of a node or output. Options: frame or `"sheet"`, channel, size, background (checker / black / white / color / game), tile 2×2 |
 | `render_compare(target, referenceId, options)` | One PNG: output and reference side by side at the same size and background, labeled |
+| `list_gradients()` / `sample_gradient(referenceId, from, to)` | The gradients saved with the project and the built-in ones; the colors along a line across a reference, as gradient stops |
 | `render_frames(target, frames[])` | A contact strip of selected frames |
 | `measure(target, options)` | Numbers the agent can reason about without guessing from pixels: alpha coverage %, bounding box, histogram (per channel, 16 bins), mean / dominant colors, band area ratios, number of islands and smallest island area, edge touching (does the shape hit the frame border), loop seam error, frame-to-frame change |
 

@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore, type ReactElement } from "re
 import { generation, useGeneration } from "../../ai/generation"
 import { NumberField, TextField, Toggle } from "../../inspector/fields"
 import { session } from "../session"
+import { HotkeySettings } from "./HotkeySettings"
 import { Icon } from "./Icon"
 
 let open = false
@@ -15,7 +16,7 @@ export function openSettings(): void {
   setOpen(true)
 }
 
-/** Settings dialog. For now it holds one thing: the setup of AI images. */
+/** Settings dialog: the setup of AI images, and the hotkeys. */
 export function Settings(): ReactElement | null {
   const shown = useSyncExternalStore(
     (listener) => {
@@ -140,6 +141,7 @@ export function Settings(): ReactElement | null {
               </p>
             </>
           )}
+          <HotkeySettings />
         </div>
       </section>
     </div>

@@ -11,6 +11,7 @@ import { generateFor, generationKey, useGeneration } from "../ai/generation"
 import { openSettings } from "../app/components/Settings"
 import { ColorField, NumberField, Segmented, Select, Slider, TextArea, TextField, Toggle, newGesture, type Rgba } from "./fields"
 import { Comments } from "./Comments"
+import { packSequence } from "./sequence"
 import { GradientEditor } from "./GradientEditor"
 
 type Props = { project: Project; graph: Graph | null; selection: readonly string[]; problems: readonly Problem[] }
@@ -272,6 +273,42 @@ function ImageFileRow({ graph, node }: { graph: Graph; node: Node }): ReactEleme
   )
 }
 
+/** Image Sequence: the frames are chosen together, packed into one sheet and stored with the project. */
+function SequenceFileRow({ graph, node }: { graph: Graph; node: Node }): ReactElement {
+  const [busy, setBusy] = useState(false)
+  const count = typeof node.params.count === "number" ? node.params.count : 0
+  const has = typeof node.params.file === "string" && node.params.file !== ""
+  const choose = async (): Promise<void> => {
+    const api = window.vfxforge
+    if (!api) return session.say("Frames can only be chosen inside the VFXForge app.", true)
+    setBusy(true)
+    try {
+      const files = await api.pickSequence()
+      if (!files) return
+      const sheet = await packSequence(files.map((f) => f.bytes))
+      const ref = await api.storeImage(session.getState().path, { width: sheet.width, height: sheet.height, data: sheet.data })
+      if (!ref) throw new Error("The packed frames could not be stored.")
+      session.apply([{ op: "set_params", graphId: graph.id, id: node.id, params: { file: ref, cols: sheet.cols, rows: sheet.rows, count: sheet.count, cell: sheet.cell } }], "Choose frames")
+      if (sheet.scaled) session.say(`The frames were scaled down to ${sheet.cell[0]}×${sheet.cell[1]} so that all ${sheet.count} fit in one sheet.`)
+    } catch (error) {
+      session.say(`Could not use those frames. ${error instanceof Error ? error.message : String(error)}`, true)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="param-row">
+      <span className="param-label">Frames</span>
+      <span className="field field-grow field-driven">
+        <span className="field-value mono" data-testid="sequence-count">{has ? `${count} frame${count === 1 ? "" : "s"}` : "None"}</span>
+      </span>
+      <button className="chip chip-button" disabled={busy} data-testid="sequence-choose" onClick={() => void choose()}>
+        {busy ? "Packing…" : "Choose…"}
+      </button>
+    </div>
+  )
+}
+
 /** AI Image: prompt and options, then Generate. The key is set once, in Settings. */
 function AiImagePanel({ graph, node, def }: { graph: Graph; node: Node; def: ResolvedNodeDef }): ReactElement {
   const { status, busy, errors } = useGeneration()
@@ -327,7 +364,9 @@ function AiImagePanel({ graph, node, def }: { graph: Graph; node: Node; def: Res
 function NodeInspector({ graph, node, def, problems }: { graph: Graph; node: Node; def: ResolvedNodeDef; problems: readonly Problem[] }): ReactElement {
   // The AI Image node has its own panel; an image file is chosen with a button, not typed.
   const special = node.type === "ai_image"
-  const own = special ? [] : Object.entries(def.params).filter(([name]) => !COMMON.has(name) && name !== def.asset)
+  // An Image Sequence's sheet layout is set when the frames are chosen; it is not something to edit by hand.
+  const packed = node.type === "image_sequence" ? new Set(["cols", "rows", "count", "cell"]) : new Set<string>()
+  const own = special ? [] : Object.entries(def.params).filter(([name]) => !COMMON.has(name) && name !== def.asset && !packed.has(name))
   const common = Object.entries(def.params).filter(([name]) => COMMON.has(name))
   return (
     <>
@@ -352,7 +391,7 @@ function NodeInspector({ graph, node, def, problems }: { graph: Graph; node: Nod
       {special && <AiImagePanel graph={graph} node={node} def={def} />}
       {!special && def.asset !== undefined && (
         <Group title="Image">
-          <ImageFileRow graph={graph} node={node} />
+          {node.type === "image_sequence" ? <SequenceFileRow graph={graph} node={node} /> : <ImageFileRow graph={graph} node={node} />}
         </Group>
       )}
       {own.length > 0 && (

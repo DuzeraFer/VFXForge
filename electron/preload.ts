@@ -22,6 +22,8 @@ const api = {
   readAsset: (projectPath: string | null, ref: string): Promise<Uint8Array | null> => ipcRenderer.invoke("asset:read", projectPath, ref),
   /** Lets the artist pick an image, copies it into the project and returns its reference. */
   importAsset: (projectPath: string | null): Promise<string | null> => ipcRenderer.invoke("asset:import", projectPath),
+  /** Lets the artist pick the frames of an image sequence and returns their bytes, in name order. */
+  pickSequence: (): Promise<{ name: string; bytes: Uint8Array }[] | null> => ipcRenderer.invoke("asset:pickSequence"),
   /** Stores an RGBA picture made in the window as a PNG of the project and returns its reference. */
   storeImage: (projectPath: string | null, image: { width: number; height: number; data: Uint8Array }): Promise<string | null> => ipcRenderer.invoke("asset:storeImage", projectPath, image),
   /** Copies an image file, named by its full path, into the project's images. */

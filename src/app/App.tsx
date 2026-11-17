@@ -16,6 +16,7 @@ import { LeftPanel } from "./components/LeftPanel"
 import { Timeline } from "./components/Timeline"
 import { TitleBar, type Tab } from "./components/TitleBar"
 import { ToolStrip, type ToolId } from "./components/ToolStrip"
+import { actionFor } from "./hotkeys"
 import { useDrag } from "./hooks/useDrag"
 import { useTheme } from "./hooks/useTheme"
 import { Toast } from "./components/Toast"
@@ -130,13 +131,13 @@ export function App(): ReactElement {
     const onKey = (event: KeyboardEvent): void => {
       const el = document.activeElement as HTMLElement | null
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT")) return
-      if (event.ctrlKey || event.metaKey || event.altKey) return
-      const key = event.key.toLowerCase()
-      if (key === "v") setTool("select")
-      else if (key === "h") setTool("pan")
-      else if (key === "k") playback.setPlaying(!playback.getState().playing)
-      else if (key === ",") playback.step(-1)
-      else if (key === ".") playback.step(1)
+      const action = actionFor(event)
+      if (action === "tool.select") setTool("select")
+      else if (action === "tool.pan") setTool("pan")
+      else if (action === "tool.reroute") setTool("reroute")
+      else if (action === "play.toggle") playback.setPlaying(!playback.getState().playing)
+      else if (action === "play.previous") playback.step(-1)
+      else if (action === "play.next") playback.step(1)
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
