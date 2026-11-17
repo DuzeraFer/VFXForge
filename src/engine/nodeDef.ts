@@ -30,7 +30,8 @@ export type ParamSchema =
   | { type: "color"; default: [number, number, number, number]; doc?: string }
   | { type: "floatList"; default: number[]; maxLength: number; min?: number; max?: number; doc?: string }
   | { type: "gradient"; default: GradientStop[]; doc?: string }
-  | { type: "string"; default: string; doc?: string }
+  /** multiline: edited in a text box of several lines (code, prompts). */
+  | { type: "string"; default: string; multiline?: boolean; doc?: string }
 
 export type ParamType = ParamSchema["type"]
 
@@ -90,7 +91,8 @@ export type NodeDef = {
   asset?: string
   /**
    * Pixel node body. Must define `fn node(uv: vec2f) -> vec4f`. It can read
-   * `P.<param>`, `G` (globals), `sample_<input>(uv)`, `has_<input>` and, for
+   * `P.<param>`, `G` (globals), `sample_<input>(uv)`, `has_<input>`, `gray_<input>`
+   * (the wire carries a gray image, so only .r is kept on a `same:` output) and, for
    * multi-output nodes, the constant `OUT` (output index).
    *
    * In WGSL, bool and enum parameters are `u32` (enum = index of the option),
@@ -98,6 +100,15 @@ export type NodeDef = {
    * and a gradient `x` with `gradient_x(t)`.
    */
   wgsl?: string
+  /**
+   * Name of a string parameter whose text is WGSL written by the artist or the
+   * agent. It replaces the code marker (CODE_MARKER) in `wgsl`, so the shader is
+   * rebuilt when the text changes. A text that does not compile is reported
+   * as a problem of the node, like any other shader error.
+   */
+  code?: string
+  /** Checks that go beyond one parameter's type, e.g. a formula that does not parse. Returns what is wrong, or null. */
+  check?: (params: Record<string, ParamValue>) => string | null
   /**
    * The node adds nothing to the pixels: its output is its first connected
    * input, at that input's size (an Output after a sheet stays a sheet).
@@ -114,6 +125,9 @@ export type NodeDef = {
 }
 
 export type ResolvedNodeDef = Omit<NodeDef, "inputs"> & { inputs: Record<string, InputDef> }
+
+/** Where a node's own code goes inside its shader. */
+export const CODE_MARKER = "/*CODE*/"
 
 const NAME = /^[a-z][a-z0-9_]*$/
 /** Names the engine generates around a node body. */
@@ -162,6 +176,11 @@ export function defineNode(def: NodeDef): ResolvedNodeDef {
     if (!def.wgsl) throw new Error(`${where}: only pixel nodes can read an image file.`)
     if (params[def.asset]?.type !== "string") throw new Error(`${where}: asset "${def.asset}" must be a string parameter.`)
     if ("asset" in inputs) throw new Error(`${where}: "asset" cannot be an input name on a node that reads an image file.`)
+  }
+
+  if (def.code !== undefined) {
+    if (!def.wgsl || !def.wgsl.includes(CODE_MARKER)) throw new Error(`${where}: a node with code needs wgsl that contains ${CODE_MARKER}.`)
+    if (params[def.code]?.type !== "string") throw new Error(`${where}: code "${def.code}" must be a string parameter.`)
   }
 
   const valueInputs = Object.values(inputs).filter((i) => i.type === "value").length

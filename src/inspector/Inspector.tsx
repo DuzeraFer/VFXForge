@@ -194,6 +194,13 @@ function ParamControl({ graph, node, name, schema }: { graph: Graph; node: Node;
         </Row>
       )
     case "string":
+      if (schema.multiline) {
+        return (
+          <Row label={label} title={schema.doc} stacked>
+            <TextArea value={value as string} label={label} rows={6} onChange={(v) => set(v)} />
+          </Row>
+        )
+      }
       return (
         <Row label={label} title={schema.doc}>
           <TextField value={value as string} label={label} onChange={(v) => set(v)} />

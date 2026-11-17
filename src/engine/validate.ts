@@ -4,7 +4,7 @@
  * compatible data types, parameter values in range.
  */
 
-import { parseSocketRef, type Graph, type Node } from "../doc/types"
+import { parseSocketRef, type Graph, type Node, type ParamValue } from "../doc/types"
 import { checkParam, isDrivable, type DataType, type NodeRegistry, type ResolvedNodeDef } from "./nodeDef"
 
 export type Problem = {
@@ -85,6 +85,13 @@ export function resolveGraph(graph: Graph, registry: NodeRegistry): ResolvedGrap
       }
       const problem = checkParam(schema, value)
       if (problem) problems.push({ nodeId: node.id, code: "bad_param", message: `Parameter "${name}" ${problem}.` })
+    }
+
+    if (def.check) {
+      const merged: Record<string, ParamValue> = {}
+      for (const [name, schema] of Object.entries(def.params)) merged[name] = node.params[name] ?? (schema.default as ParamValue)
+      const problem = def.check(merged)
+      if (problem) problems.push({ nodeId: node.id, code: "bad_param", message: problem })
     }
 
     for (const [param, ref] of Object.entries(node.driven)) {

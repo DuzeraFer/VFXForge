@@ -1,0 +1,4650 @@
+{
+ "version": 1,
+ "name": "nodes2",
+ "seed": 11,
+ "graphs": [
+  {
+   "id": "g1",
+   "name": "blur",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "size": [
+       0.55,
+       0.55
+      ]
+     }
+    },
+    {
+     "id": "x",
+     "type": "blur",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "radius": 0.06
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g2",
+   "name": "glow",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "anime_star",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "outer": 0.6
+     }
+    },
+    {
+     "id": "x",
+     "type": "glow",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "radius": 0.1,
+      "intensity": 2
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g3",
+   "name": "glow_color",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "g",
+     "type": "gradient",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "softness": 0.3
+     }
+    },
+    {
+     "id": "m",
+     "type": "channels_merge",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "fill": [
+       0,
+       0,
+       0.6,
+       1
+      ]
+     }
+    },
+    {
+     "id": "x",
+     "type": "glow",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "radius": 0.08,
+      "threshold": 0.4,
+      "tint": [
+       1,
+       0.6,
+       0.2,
+       1
+      ]
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "g.out",
+     "to": "m.r"
+    },
+    {
+     "from": "s.out",
+     "to": "m.g"
+    },
+    {
+     "from": "m.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g4",
+   "name": "rim_shade",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "size": [
+       0.55,
+       0.55
+      ]
+     }
+    },
+    {
+     "id": "x",
+     "type": "rim_shade",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "width": 0.15
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g5",
+   "name": "rim_shade_flame",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "flame_shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "output": "mask"
+     }
+    },
+    {
+     "id": "x",
+     "type": "rim_shade",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "angle": 45,
+      "width": 0.1,
+      "level": 0.3
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g6",
+   "name": "outline_outside",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "size": [
+       0.55,
+       0.55
+      ]
+     }
+    },
+    {
+     "id": "x",
+     "type": "outline",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "width": 0.1
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g7",
+   "name": "outline_inside",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "flame_shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "output": "mask"
+     }
+    },
+    {
+     "id": "x",
+     "type": "outline",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "width": 0.1,
+      "position": "inside"
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g8",
+   "name": "outline_center",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "flame_shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "output": "mask"
+     }
+    },
+    {
+     "id": "x",
+     "type": "outline",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "width": 0.08,
+      "position": "center"
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g9",
+   "name": "curves",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "g",
+     "type": "gradient",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "x",
+     "type": "curves",
+     "position": [
+      200,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "g.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g10",
+   "name": "curves_red",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "g",
+     "type": "gradient",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "softness": 0.3
+     }
+    },
+    {
+     "id": "m",
+     "type": "channels_merge",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "fill": [
+       0,
+       0,
+       0.6,
+       1
+      ]
+     }
+    },
+    {
+     "id": "x",
+     "type": "curves",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "channel": "red",
+      "points": [
+       0,
+       1,
+       1,
+       0
+      ]
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "g.out",
+     "to": "m.r"
+    },
+    {
+     "from": "s.out",
+     "to": "m.g"
+    },
+    {
+     "from": "m.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g11",
+   "name": "tone_range",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "scale": 4,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "x",
+     "type": "tone_range",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "position": 0.5,
+      "range": 0.2,
+      "contrast": 1
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "n.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g12",
+   "name": "histogram_scan",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "scale": 4,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "x",
+     "type": "histogram_scan",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "position": 0.4,
+      "contrast": 0.9
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "n.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g13",
+   "name": "hsl",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "g",
+     "type": "gradient",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "softness": 0.3
+     }
+    },
+    {
+     "id": "m",
+     "type": "channels_merge",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "fill": [
+       0,
+       0,
+       0.6,
+       1
+      ]
+     }
+    },
+    {
+     "id": "x",
+     "type": "hsl",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "hue": 0.33,
+      "saturation": 0.5,
+      "lightness": -0.2
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "g.out",
+     "to": "m.r"
+    },
+    {
+     "from": "s.out",
+     "to": "m.g"
+    },
+    {
+     "from": "m.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g14",
+   "name": "invert",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "g",
+     "type": "gradient",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "x",
+     "type": "invert",
+     "position": [
+      200,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "g.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g15",
+   "name": "grayscale",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "g",
+     "type": "gradient",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "softness": 0.3
+     }
+    },
+    {
+     "id": "m",
+     "type": "channels_merge",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "fill": [
+       0,
+       0,
+       0.6,
+       1
+      ]
+     }
+    },
+    {
+     "id": "x",
+     "type": "grayscale",
+     "position": [
+      600,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "g.out",
+     "to": "m.r"
+    },
+    {
+     "from": "s.out",
+     "to": "m.g"
+    },
+    {
+     "from": "m.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g16",
+   "name": "remap",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "output": "field"
+     }
+    },
+    {
+     "id": "x",
+     "type": "remap",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "in_min": -0.5,
+      "in_max": 0.5
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g17",
+   "name": "premultiply",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "g",
+     "type": "gradient",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "softness": 0.3
+     }
+    },
+    {
+     "id": "m",
+     "type": "channels_merge",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "fill": [
+       0,
+       0,
+       0.6,
+       1
+      ]
+     }
+    },
+    {
+     "id": "x",
+     "type": "premultiply",
+     "position": [
+      600,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "g.out",
+     "to": "m.r"
+    },
+    {
+     "from": "s.out",
+     "to": "m.g"
+    },
+    {
+     "from": "m.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g18",
+   "name": "color_to_mask",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "g",
+     "type": "gradient",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "softness": 0.3
+     }
+    },
+    {
+     "id": "m",
+     "type": "channels_merge",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "fill": [
+       0,
+       0,
+       0.6,
+       1
+      ]
+     }
+    },
+    {
+     "id": "x",
+     "type": "color_to_mask",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "color": [
+       1,
+       0,
+       0.6,
+       1
+      ],
+      "tolerance": 0.5,
+      "softness": 0.2
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "g.out",
+     "to": "m.r"
+    },
+    {
+     "from": "s.out",
+     "to": "m.g"
+    },
+    {
+     "from": "m.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g19",
+   "name": "anime_star",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "anime_star",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g20",
+   "name": "anime_star_jitter",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "anime_star",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "points": 9,
+      "jitter": 0.6,
+      "curve": 1.5,
+      "inner": 0.25,
+      "rotation": 10
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g21",
+   "name": "slash_arc",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "slash_arc",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g22",
+   "name": "slash_arc_fade",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "slash_arc",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "fade": 1,
+      "sweep": -140,
+      "start": 160,
+      "softness": 0.02
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g23",
+   "name": "burst",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "burst",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g24",
+   "name": "burst_many",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "burst",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "rays": 40,
+      "hole": 0.35,
+      "width": 0.8,
+      "taper": 0.3,
+      "jitter": 0.8,
+      "width_jitter": 0.7
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g25",
+   "name": "droplet",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "droplet",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g26",
+   "name": "droplet_tilted",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "droplet",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "rotation": -120,
+      "offset": [
+       0.4,
+       -0.2
+      ],
+      "head": 0.12,
+      "taper": 2
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g27",
+   "name": "spline",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "spline",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g28",
+   "name": "spline_outputs",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "spline",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "closed": true,
+      "points": [
+       0,
+       0.6,
+       0.6,
+       0,
+       0,
+       -0.6,
+       -0.6,
+       0
+      ],
+      "profile": [
+       1
+      ],
+      "width": 0.15,
+      "curl": 0.5
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "mask"
+     }
+    },
+    {
+     "id": "o2",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "along"
+     }
+    },
+    {
+     "id": "o3",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "across"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    },
+    {
+     "from": "x.along",
+     "to": "o2.in"
+    },
+    {
+     "from": "x.across",
+     "to": "o3.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g29",
+   "name": "trail_plain",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "trail",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g30",
+   "name": "trail_texture",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "n",
+     "type": "voronoi",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "scale": 6
+     }
+    },
+    {
+     "id": "x",
+     "type": "trail",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "width": 0.2,
+      "repeat": 2,
+      "scroll": 0.25
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "n.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g31",
+   "name": "lightning",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "lightning",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g32",
+   "name": "lightning_other",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "lightning",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "evolution": 3,
+      "branches": 6,
+      "jagged": 0.4,
+      "softness": 0.02,
+      "start": [
+       -0.8,
+       0.6
+      ],
+      "end": [
+       0.8,
+       -0.5
+      ]
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g33",
+   "name": "polar_wrap",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "scale": 4
+     }
+    },
+    {
+     "id": "x",
+     "type": "polar",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "turns": 2
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "n.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g34",
+   "name": "polar_unwrap",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "anime_star",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "points": 5
+     }
+    },
+    {
+     "id": "x",
+     "type": "polar",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "mode": "to_rect"
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g35",
+   "name": "curl_distort",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "shape": "ring",
+      "size": [
+       0.6,
+       0.6
+      ]
+     }
+    },
+    {
+     "id": "x",
+     "type": "curl_distort",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "intensity": 0.3
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g36",
+   "name": "twirl",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "gradient",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "x",
+     "type": "twirl",
+     "position": [
+      200,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g37",
+   "name": "directional_warp",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "shape": "square",
+      "size": [
+       0.4,
+       0.4
+      ]
+     }
+    },
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "scale": 4,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "x",
+     "type": "directional_warp",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "intensity": 0.3,
+      "angle": 90
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "n.out",
+     "to": "x.map"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g38",
+   "name": "vector_warp",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "shape": "ring",
+      "size": [
+       0.6,
+       0.6
+      ]
+     }
+    },
+    {
+     "id": "n",
+     "type": "curl_noise",
+     "position": [
+      200,
+      0
+     ]
+    },
+    {
+     "id": "x",
+     "type": "vector_warp",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "intensity": 0.15
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "n.out",
+     "to": "x.flow"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g39",
+   "name": "mirror_horizontal",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "scale": 4,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "x",
+     "type": "mirror",
+     "position": [
+      200,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "n.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g40",
+   "name": "mirror_radial",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "scale": 4,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "x",
+     "type": "mirror",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "mode": "radial",
+      "count": 5
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "n.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g41",
+   "name": "make_tileable",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "n",
+     "type": "anisotropic",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "angle": 30,
+      "scale": 12,
+      "stretch": 3
+     }
+    },
+    {
+     "id": "x",
+     "type": "make_tileable",
+     "position": [
+      200,
+      0
+     ]
+    },
+    {
+     "id": "t",
+     "type": "transform_2d",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "offset": [
+       0.5,
+       0.5
+      ]
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "n.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "t.in"
+    },
+    {
+     "from": "t.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g42",
+   "name": "directional_blur",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "size": [
+       0.55,
+       0.55
+      ]
+     }
+    },
+    {
+     "id": "x",
+     "type": "directional_blur",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "angle": 30,
+      "length": 0.3
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g43",
+   "name": "directional_blur_one_sided",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "size": [
+       0.55,
+       0.55
+      ]
+     }
+    },
+    {
+     "id": "x",
+     "type": "directional_blur",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "angle": 90,
+      "length": 0.4,
+      "one_sided": true
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g44",
+   "name": "radial_blur_zoom",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "anime_star",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "points": 6,
+      "outer": 0.6
+     }
+    },
+    {
+     "id": "x",
+     "type": "radial_blur",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "amount": 0.6
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g45",
+   "name": "radial_blur_spin",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "anime_star",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "points": 6,
+      "outer": 0.6
+     }
+    },
+    {
+     "id": "x",
+     "type": "radial_blur",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "mode": "spin",
+      "amount": 0.1
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g46",
+   "name": "non_uniform_blur",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "voronoi",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "output": "edges"
+     }
+    },
+    {
+     "id": "g",
+     "type": "gradient",
+     "position": [
+      200,
+      0
+     ]
+    },
+    {
+     "id": "x",
+     "type": "non_uniform_blur",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "radius": 0.08
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "g.out",
+     "to": "x.map"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g47",
+   "name": "slope_blur",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "size": [
+       0.55,
+       0.55
+      ]
+     }
+    },
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "scale": 4,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "x",
+     "type": "slope_blur",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "intensity": 0.3
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "n.out",
+     "to": "x.map"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g48",
+   "name": "slope_blur_min",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "size": [
+       0.55,
+       0.55
+      ]
+     }
+    },
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "scale": 4,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "x",
+     "type": "slope_blur",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "intensity": 0.3,
+      "mode": "min"
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "n.out",
+     "to": "x.map"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g49",
+   "name": "morphology_dilate",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "anime_star",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "x",
+     "type": "morphology",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "radius": 0.1
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g50",
+   "name": "morphology_erode",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "size": [
+       0.55,
+       0.55
+      ]
+     }
+    },
+    {
+     "id": "x",
+     "type": "morphology",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "mode": "erode",
+      "radius": 0.1
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g51",
+   "name": "edge_detect",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "voronoi",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "output": "cells"
+     }
+    },
+    {
+     "id": "x",
+     "type": "edge_detect",
+     "position": [
+      200,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g52",
+   "name": "edge_detect_soft",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "scale": 4,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "x",
+     "type": "edge_detect",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "strength": 8,
+      "width": 0.08
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "n.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g53",
+   "name": "distance",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "anime_star",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "outer": 0.5
+     }
+    },
+    {
+     "id": "x",
+     "type": "distance",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "reach": 0.5
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g54",
+   "name": "normal_from_height",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "scale": 4,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "x",
+     "type": "normal_from_height",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "intensity": 4
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "n.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g55",
+   "name": "normal_directx",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "softness": 0.5
+     }
+    },
+    {
+     "id": "x",
+     "type": "normal_from_height",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "intensity": 4,
+      "format": "directx"
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g56",
+   "name": "tile_generator",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "tile_generator",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g57",
+   "name": "tile_generator_bricks",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "shape": "rounded_rect",
+      "size": [
+       0.9,
+       0.4
+      ],
+      "roundness": 0.1
+     }
+    },
+    {
+     "id": "x",
+     "type": "tile_generator",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "columns": 3,
+      "rows": 6,
+      "row_offset": 0.5,
+      "value_jitter": 0.6,
+      "scale": 1
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g58",
+   "name": "tile_generator_jitter",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "polygon",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "sides": 3
+     }
+    },
+    {
+     "id": "x",
+     "type": "tile_generator",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "scale": 1.4,
+      "scale_jitter": 0.5,
+      "rotation_jitter": 1,
+      "position_jitter": 0.8
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g59",
+   "name": "shape_splatter",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "shape_splatter",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g60",
+   "name": "shape_splatter_stars",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "anime_star",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "x",
+     "type": "shape_splatter",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "density": 4,
+      "amount": 0.7,
+      "scale": 1.5,
+      "evolution": 0.3,
+      "value_jitter": 0.5
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g61",
+   "name": "splatter_circular",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "splatter_circular",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g62",
+   "name": "splatter_circular_spiral",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "droplet",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "offset": [
+       0,
+       0.6
+      ],
+      "head": 0.3,
+      "length": 1.4
+     }
+    },
+    {
+     "id": "x",
+     "type": "splatter_circular",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "count": 14,
+      "radius": 0.2,
+      "spiral": 0.6,
+      "scale_end": 0.3,
+      "arc": 540,
+      "scale": 0.3
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.in"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g63",
+   "name": "clouds",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "clouds",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g64",
+   "name": "bnw_spots",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "bnw_spots",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g65",
+   "name": "bnw_spots_sparse",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "bnw_spots",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "density": 0.25,
+      "edge": 0.02,
+      "scale": 6
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g66",
+   "name": "anisotropic",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "anisotropic",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g67",
+   "name": "anisotropic_vertical",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "anisotropic",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "angle": 90,
+      "scale": 16,
+      "stretch": 4,
+      "octaves": 1
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g68",
+   "name": "curl_noise",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "curl_noise",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g69",
+   "name": "white_noise",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "white_noise",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g70",
+   "name": "white_noise_cells",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "white_noise",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "size": 12,
+      "evolution": 2
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g71",
+   "name": "band_noise",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "band_noise",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g72",
+   "name": "band_noise_wide",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "x",
+     "type": "band_noise",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "scale": 6,
+      "band": 1,
+      "contrast": 2
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g73",
+   "name": "random_drive",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "r",
+     "type": "random",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "seed": 4,
+      "min": 0.2,
+      "max": 0.7
+     }
+    },
+    {
+     "id": "x",
+     "type": "shape",
+     "position": [
+      200,
+      0
+     ],
+     "driven": {
+      "softness": "r.out"
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g74",
+   "name": "switch",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "size": [
+       0.55,
+       0.55
+      ]
+     }
+    },
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "scale": 4,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "v",
+     "type": "value",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "value": 1
+     }
+    },
+    {
+     "id": "x",
+     "type": "switch",
+     "position": [
+      600,
+      0
+     ],
+     "driven": {
+      "pick": "v.out"
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "x.a"
+    },
+    {
+     "from": "n.out",
+     "to": "x.b"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g75",
+   "name": "pixel_expression",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "scale": 4,
+      "octaves": 3
+     }
+    },
+    {
+     "id": "x",
+     "type": "pixel_expression",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "code": "let p = centered(uv);\nlet ring = sdf_fill(abs(length(p) - x) - 0.1, 0.0);\nreturn vec4f(a.r * ring, ring * y, 1.0 - a.r, 1.0);",
+      "x": 0.5,
+      "y": 0.8
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "n.out",
+     "to": "x.a"
+    },
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g76",
+   "name": "value_expression",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "v",
+     "type": "value_expression",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "expression": "0.2 + 0.3 * ping(a * 2) + max(b, 0.1)",
+      "value_a": 0.2,
+      "value_b": 0.05
+     }
+    },
+    {
+     "id": "x",
+     "type": "polygon",
+     "position": [
+      200,
+      0
+     ],
+     "driven": {
+      "radius": "v.out"
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g77",
+   "name": "packed_output",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "s",
+     "type": "shape",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      200,
+      0
+     ]
+    },
+    {
+     "id": "p",
+     "type": "packed_output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "fill": [
+       0,
+       0,
+       0.25,
+       1
+      ]
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "s.out",
+     "to": "p.r"
+    },
+    {
+     "from": "n.out",
+     "to": "p.g"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g78",
+   "name": "animated_noises",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 4,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "t",
+     "type": "time",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "x",
+     "type": "clouds",
+     "position": [
+      200,
+      0
+     ],
+     "driven": {
+      "evolution": "t.phase"
+     }
+    },
+    {
+     "id": "y",
+     "type": "curl_distort",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "intensity": 0.2
+     },
+     "driven": {
+      "evolution": "t.phase"
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "x.out",
+     "to": "y.in"
+    },
+    {
+     "from": "y.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  }
+ ]
+}

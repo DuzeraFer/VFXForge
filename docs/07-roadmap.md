@@ -98,6 +98,15 @@ Add the P1 nodes from 04, in this order, each with a golden test:
 
 **Accept**: all 04 P0 + P1 nodes exist, are documented in `list_node_types`, and pass golden tests.
 
+Status: built, with a golden image for every node type (a unit test fails if a node has none). Also added from the P0 list: Blur, Invert, Grayscale, Remap, Premultiply, Band Noise, Packed Output; and Color to Mask from P1. Notes on how some were done:
+
+- Every node is still one pass. Blur, Glow, Outline, Dilate/Erode and Distance take many samples per pixel instead of several passes, so they are exact for small radii and estimates for large ones (their docs say up to where). Distance at 1024 px takes seconds on a software GPU.
+- Spline, Trail, Curves and the width profiles take their points as lists of numbers. Dragging points on the canvas is not built yet.
+- Directional Warp is its own node as well as a mode of Warp.
+- Pixel Expression code is compiled into the node's shader. `loop`, `while`, a `for` without an end condition and binding declarations are refused before compiling; a compile error is reported on the node.
+
+Not built, moved to Phase 7 because they need the function and exposed-parameter work: Graph Input, Image Sequence, Gradient Dynamic (Palette Remap covers the common case), Multi Blend.
+
 ## Phase 7 — Reuse and library
 
 1. Functions/subgraphs (16 in / 16 out), create from selection, import/export.

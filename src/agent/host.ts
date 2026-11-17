@@ -9,7 +9,7 @@ import { applyOps, BatchError, nextId, type Graph, type Op, type ParamValue } fr
 import type { Engine } from "../engine/evaluator"
 import { toRgba8 } from "../engine/evaluator"
 import { measureFrame, measureMotion } from "../engine/measure"
-import { compositeOver, isResultNode, resolveTarget, sheetLayout, type Rgba8Image, type Target } from "../engine/render"
+import { compositeOver, defaultResultName, isResultNode, resolveTarget, sheetLayout, type Rgba8Image, type Target } from "../engine/render"
 import { resolveGraph, type Problem } from "../engine/validate"
 import { nodeDefs, registry } from "../nodes"
 import { graphText } from "./graphText"
@@ -70,10 +70,11 @@ async function frameOf(graph: Graph, target: Target, frame: number): Promise<{ i
     const related = problems.map((p) => `${p.nodeId}: ${p.message}`).join(" ")
     throw new ToolError(`Cannot render ${target.nodeId}.${target.output}: ${error instanceof Error ? error.message : String(error)}${related ? ` Problems in the graph: ${related}` : ""}`)
   }
-  const pixels = await engine.readPixels(result)
-  await engine.settle().catch((error: unknown) => {
-    throw new ToolError(`Shader error: ${error instanceof Error ? error.message : String(error)}`)
-  })
+  const shaderError = (error: unknown): never => {
+    throw new ToolError(`Cannot render ${target.nodeId}.${target.output}: ${error instanceof Error ? error.message : String(error)}`)
+  }
+  const pixels = await engine.readPixels(result).catch(shaderError)
+  await engine.settle().catch(shaderError)
   return { image: { width: result.width, height: result.height, data: toRgba8(pixels) }, gray: result.type === "gray" }
 }
 
@@ -279,7 +280,7 @@ function basicInfo(): ToolResult {
       fps: g.settings.fps,
       loop: g.settings.loop,
       nodes: g.nodes.length,
-      outputs: g.nodes.filter((n) => isResultNode(n.type)).map((n) => ({ nodeId: n.id, name: n.params.name ?? (n.type === "output" ? "output" : "sheet"), ...(n.type === "sheet_output" ? { sheet: true } : {}) }))
+      outputs: g.nodes.filter((n) => isResultNode(n.type)).map((n) => ({ nodeId: n.id, name: n.params.name ?? defaultResultName(n.type), ...(n.type === "sheet_output" ? { sheet: true } : {}), ...(n.type === "packed_output" ? { packed: true } : {}) }))
     })),
     nodeTypes: nodeDefs.length
   })

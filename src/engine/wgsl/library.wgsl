@@ -203,3 +203,50 @@ fn smooth_min(a: f32, b: f32, k: f32) -> f32 {
 fn luminance(c: vec3f) -> f32 {
   return dot(c, vec3f(0.2126, 0.7152, 0.0722));
 }
+
+fn rgb_to_hsl(c: vec3f) -> vec3f {
+  let hi = max(c.r, max(c.g, c.b));
+  let lo = min(c.r, min(c.g, c.b));
+  let l = (hi + lo) * 0.5;
+  let d = hi - lo;
+  if (d < 1e-6) { return vec3f(0.0, 0.0, l); }
+  let s = d / max(1.0 - abs(2.0 * l - 1.0), 1e-6);
+  var h: f32;
+  if (hi == c.r) { h = (c.g - c.b) / d; }
+  else if (hi == c.g) { h = (c.b - c.r) / d + 2.0; }
+  else { h = (c.r - c.g) / d + 4.0; }
+  return vec3f(fract(h / 6.0), clamp(s, 0.0, 1.0), l);
+}
+
+fn hsl_to_rgb(hsl: vec3f) -> vec3f {
+  let k = fract(vec3f(0.0, 8.0 / 12.0, 4.0 / 12.0) + hsl.x) * 12.0;
+  let a = hsl.y * min(hsl.z, 1.0 - hsl.z);
+  return hsl.z - a * clamp(min(k - 3.0, 9.0 - k), vec3f(-1.0), vec3f(1.0));
+}
+
+// ── More hashes and noise helpers ───────────────────────────────────────────
+
+// 0..1 from one integer.
+fn hash1(i: i32, seed: u32) -> f32 {
+  return u32_to_unit(pcg(u32(i) + pcg(seed)));
+}
+
+// Two smooth periodic noises, about -1..1 each, for pushing coordinates around.
+fn noise_vec2(p: vec3f, period: vec3i, seed: u32) -> vec2f {
+  return vec2f(perlin3(p, period, seed), perlin3(p, period, seed + 7919u));
+}
+
+// Divergence-free flow from a periodic noise potential: it swirls instead of piling up.
+fn curl2(p: vec3f, period: vec3i, seed: u32) -> vec2f {
+  let e = 0.05;
+  let dx = perlin3(p + vec3f(e, 0.0, 0.0), period, seed) - perlin3(p - vec3f(e, 0.0, 0.0), period, seed);
+  let dy = perlin3(p + vec3f(0.0, e, 0.0), period, seed) - perlin3(p - vec3f(0.0, e, 0.0), period, seed);
+  return vec2f(dy, -dx) / (2.0 * e);
+}
+
+// Golden-angle disc: point i of n, inside the unit disc, evenly spread.
+fn disc_point(i: i32, n: i32) -> vec2f {
+  let r = sqrt((f32(i) + 0.5) / f32(n));
+  let a = f32(i) * 2.399963229728653;
+  return r * vec2f(cos(a), sin(a));
+}

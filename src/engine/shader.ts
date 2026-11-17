@@ -4,7 +4,7 @@
  */
 
 import type { GradientStop, ParamValue } from "../doc/types"
-import { MAX_GRADIENT_STOPS, type DataType, type ParamSchema, type ResolvedNodeDef } from "./nodeDef"
+import { CODE_MARKER, MAX_GRADIENT_STOPS, type DataType, type ParamSchema, type ResolvedNodeDef } from "./nodeDef"
 import library from "./wgsl/library.wgsl?raw"
 
 type FieldKind = "f32" | "i32" | "u32" | "vec2f" | "vec4f" | "vec4f[]"
@@ -215,7 +215,7 @@ function inputsWgsl(def: ResolvedNodeDef, bound: InputBinding): { code: string; 
   for (const name of def.asset !== undefined ? [...Object.keys(def.inputs), "asset"] : Object.keys(def.inputs)) {
     const type = bound[name] ?? null
     if (type === null) {
-      parts.push(`const has_${name}: bool = false;`, `fn sample_${name}(uv: vec2f) -> vec4f { return vec4f(0.0); }`)
+      parts.push(`const has_${name}: bool = false;`, `const gray_${name}: bool = false;`, `fn sample_${name}(uv: vec2f) -> vec4f { return vec4f(0.0); }`)
       continue
     }
     const binding = textures.length
@@ -224,6 +224,7 @@ function inputsWgsl(def: ResolvedNodeDef, bound: InputBinding): { code: string; 
     parts.push(
       `@group(1) @binding(${binding}) var tex_${name}: texture_2d<f32>;`,
       `const has_${name}: bool = true;`,
+      `const gray_${name}: bool = ${type === "gray"};`,
       type === "gray"
         ? `fn sample_${name}(uv: vec2f) -> vec4f { let v = ${read}.r; return vec4f(v, v, v, 1.0); }`
         : `fn sample_${name}(uv: vec2f) -> vec4f { return ${read}; }`
@@ -260,9 +261,33 @@ export type ShaderVariant = {
   textures: string[]
 }
 
-/** Complete module for one node, one output, one combination of connected inputs. */
-export function buildShader(def: ResolvedNodeDef, layout: UniformLayout, bound: InputBinding, outputIndex: number): ShaderVariant {
+export const MAX_CODE_LENGTH = 8000
+
+/**
+ * What is wrong with code written into a node, or null. The shader compiler
+ * finds real mistakes; this only stops loops that have no end in sight, which
+ * could hold the graphics card for seconds.
+ */
+export function codeProblem(code: string): string | null {
+  if (code.length > MAX_CODE_LENGTH) return `The code is longer than ${MAX_CODE_LENGTH} characters.`
+  const bare = code.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "")
+  if (/\b(loop|while)\b/.test(bare)) return "Use a for loop with a fixed count instead of loop or while."
+  if (/\bfor\s*\([^;]*;\s*;/.test(bare)) return "A for loop needs an end condition."
+  if (/@(group|binding|fragment|vertex|compute)\b/.test(bare)) return "The code cannot declare bindings or entry points."
+  return null
+}
+
+/** Small stable hash for cache keys. */
+export function hashText(text: string): string {
+  let h = 2166136261
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619)
+  return (h >>> 0).toString(36) + text.length.toString(36)
+}
+
+/** Complete module for one node, one output, one combination of connected inputs. `code` fills the node's code marker. */
+export function buildShader(def: ResolvedNodeDef, layout: UniformLayout, bound: InputBinding, outputIndex: number, custom?: string): ShaderVariant {
   if (!def.wgsl) throw new Error(`Node "${def.type}" has no shader.`)
+  const body = def.code !== undefined ? def.wgsl.replace(CODE_MARKER, () => custom ?? "") : def.wgsl
   const inputs = inputsWgsl(def, bound)
   const code = [
     GLOBALS_WGSL,
@@ -271,7 +296,7 @@ export function buildShader(def: ResolvedNodeDef, layout: UniformLayout, bound: 
     `const OUT: u32 = ${outputIndex}u;`,
     library,
     `// ── node: ${def.type} ──`,
-    def.wgsl,
+    body,
     MAIN_WGSL
   ].join("\n")
   return { code, textures: inputs.textures }
