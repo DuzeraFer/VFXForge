@@ -2,10 +2,11 @@
 
 import { useSyncExternalStore } from "react"
 
-export type PlaybackState = { playing: boolean; frame: number }
+/** `onion`: Preview also shows the frames before and after as ghosts. */
+export type PlaybackState = { playing: boolean; frame: number; onion: boolean }
 
 class Playback {
-  private state: PlaybackState = { playing: true, frame: 0 }
+  private state: PlaybackState = { playing: true, frame: 0, onion: false }
   private frames = 1
   private fps = 12
   private startTime = 0
@@ -56,7 +57,11 @@ class Playback {
   /** Jumps to a frame and pauses. */
   seek(frame: number): void {
     const wrapped = ((Math.round(frame) % this.frames) + this.frames) % this.frames
-    this.set({ playing: false, frame: wrapped })
+    this.set({ ...this.state, playing: false, frame: wrapped })
+  }
+
+  setOnion(onion: boolean): void {
+    this.set({ ...this.state, onion })
   }
 
   step(delta: number): void {

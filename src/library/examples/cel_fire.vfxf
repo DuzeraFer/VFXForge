@@ -16,9 +16,11 @@
         {"id":"n6","type":"erosion","position":[600,160],"params":{"amount":0.3,"bias":0.1,"tiling":"clamp"}},
         {"id":"n7","type":"band","position":[800,160],"params":{"thresholds":[-0.08,0,0.13]}},
         {"id":"n8","type":"palette_remap","position":[1000,160],"params":{"gradient":[{"color":[0.086,0.157,0.11,0],"position":0},{"color":[0.086,0.157,0.11,1],"position":0.3333333},{"color":[0.384,0.898,0.133,1],"position":0.6666667},{"color":[0.843,1,0.384,1],"position":1}]}},
-        {"id":"n9","type":"output","position":[1200,160],"params":{"name":"fire_cel_green"}}
+        {"id":"n9","type":"output","position":[1200,160],"params":{"name":"fire_cel_green"}},
+        {"id":"n10","type":"sheet_output","name":"Sheet","position":[1200,320],"params":{"cols":4,"name":"fire_cel_green_sheet"}}
       ],
       "links": [
+        {"from":"n8.out","to":"n10.in"},
         {"from":"n4.out","to":"n5.in"},
         {"from":"n2.out","to":"n5.map"},
         {"from":"n5.out","to":"n6.in"},

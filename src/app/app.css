@@ -1538,3 +1538,27 @@ kbd,
   opacity: 0.5;
   pointer-events: none;
 }
+
+/* ── Preview: sheet, seam, onion ─────────────────────────── */
+
+.preview {
+  min-width: 0;
+  overflow: hidden;
+}
+.preview-toolbar {
+  min-width: 0;
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+.preview-status {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-stage) 80%, transparent);
+  font-size: 10px;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  pointer-events: none;
+}

@@ -9,7 +9,7 @@ import { applyOps, BatchError, nextId, type Graph, type Op, type ParamValue } fr
 import type { Engine } from "../engine/evaluator"
 import { toRgba8 } from "../engine/evaluator"
 import { measureFrame, measureMotion } from "../engine/measure"
-import { compositeOver, resolveTarget, sheetLayout, type Rgba8Image, type Target } from "../engine/render"
+import { compositeOver, isResultNode, resolveTarget, sheetLayout, type Rgba8Image, type Target } from "../engine/render"
 import { resolveGraph, type Problem } from "../engine/validate"
 import { nodeDefs, registry } from "../nodes"
 import { graphText } from "./graphText"
@@ -278,7 +278,7 @@ function basicInfo(): ToolResult {
       fps: g.settings.fps,
       loop: g.settings.loop,
       nodes: g.nodes.length,
-      outputs: g.nodes.filter((n) => n.type === "output").map((n) => ({ nodeId: n.id, name: n.params.name ?? "output" }))
+      outputs: g.nodes.filter((n) => isResultNode(n.type)).map((n) => ({ nodeId: n.id, name: n.params.name ?? (n.type === "output" ? "output" : "sheet"), ...(n.type === "sheet_output" ? { sheet: true } : {}) }))
     })),
     nodeTypes: nodeDefs.length
   })

@@ -48,6 +48,27 @@ export type EvalContext = {
   phase: number
 }
 
+/** One cell of a sheet: which input to draw, at which frame, with which offset added to the project seed. */
+export type SheetCell = { input: string; frame: number; seed: number }
+
+/** How an `assemble` node lays out its cells. Every cell is one graph-sized image plus `padding` on each side. */
+export type SheetPlan = {
+  cols: number
+  /** Pixels of gutter around every cell. */
+  padding: number
+  /** Pixels by which colors are bled outwards under transparent pixels and into the gutter (0 = off). */
+  dilate: number
+  cells: SheetCell[]
+}
+
+export type AssembleContext = {
+  params: Record<string, ParamValue>
+  /** Names of the inputs that have a wire, in definition order. */
+  connected: string[]
+  frame: number
+  frames: number
+}
+
 export type NodeDef = {
   type: string
   category: string
@@ -77,8 +98,19 @@ export type NodeDef = {
    * and a gradient `x` with `gradient_x(t)`.
    */
   wgsl?: string
+  /**
+   * The node adds nothing to the pixels: its output is its first connected
+   * input, at that input's size (an Output after a sheet stays a sheet).
+   */
+  passthrough?: boolean
   /** Value node body: returns one number per output. */
   evaluate?: (ctx: EvalContext) => Record<string, number>
+  /**
+   * Sheet node body: the engine draws its inputs into a grid, each cell at
+   * the frame and seed the plan asks for. This is how one node sees a whole
+   * animation (Sheet Output) or several seeds (Random Flipbook).
+   */
+  assemble?: (ctx: AssembleContext) => SheetPlan
 }
 
 export type ResolvedNodeDef = Omit<NodeDef, "inputs"> & { inputs: Record<string, InputDef> }
@@ -95,7 +127,7 @@ export function defineNode(def: NodeDef): ResolvedNodeDef {
   const where = `node "${def.type}"`
   if (!NAME.test(def.type)) throw new Error(`${where}: type must be snake_case.`)
   if (!def.doc.trim()) throw new Error(`${where}: missing doc string.`)
-  if (!def.wgsl === !def.evaluate) throw new Error(`${where}: needs exactly one of wgsl or evaluate.`)
+  if ([def.wgsl, def.evaluate, def.assemble].filter(Boolean).length !== 1) throw new Error(`${where}: needs exactly one of wgsl, evaluate or assemble.`)
   if (Object.keys(def.outputs).length === 0) throw new Error(`${where}: needs at least one output.`)
 
   const inputs: Record<string, InputDef> = {}
@@ -111,7 +143,7 @@ export function defineNode(def: NodeDef): ResolvedNodeDef {
       if (!source || source.type === "value") throw new Error(`${where}: output "${name}" refers to a missing image input.`)
     }
     if (def.evaluate && type !== "value") throw new Error(`${where}: evaluate nodes can only output values.`)
-    if (def.wgsl && type === "value") throw new Error(`${where}: wgsl nodes cannot output values.`)
+    if (!def.evaluate && type === "value") throw new Error(`${where}: only evaluate nodes can output values.`)
   }
 
   const params: Record<string, ParamSchema> = {}
@@ -133,7 +165,8 @@ export function defineNode(def: NodeDef): ResolvedNodeDef {
   }
 
   const valueInputs = Object.values(inputs).filter((i) => i.type === "value").length
-  if (def.wgsl && valueInputs > 0) throw new Error(`${where}: pixel nodes take values through driven parameters, not inputs.`)
+  if (def.assemble && Object.keys(def.outputs).length !== 1) throw new Error(`${where}: assemble nodes have exactly one output.`)
+  if (!def.evaluate && valueInputs > 0) throw new Error(`${where}: pixel nodes take values through driven parameters, not inputs.`)
   if (def.evaluate && valueInputs !== Object.keys(inputs).length) throw new Error(`${where}: evaluate nodes can only take value inputs.`)
 
   if (def.wgsl) {

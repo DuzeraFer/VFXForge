@@ -11,6 +11,7 @@ export default defineNode({
     usage: { type: "enum", default: "color", options: ["color", "mask", "erosion", "flow", "normal"] },
     alpha: { type: "enum", default: "straight", options: ["straight", "premultiplied"] }
   },
+  passthrough: true,
   wgsl: /* wgsl */ `
 fn node(uv: vec2f) -> vec4f {
   return sample_in(uv);

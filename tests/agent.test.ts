@@ -17,10 +17,11 @@ describe("compact graph text", () => {
   })
 
   it("writes one node per line with changed parameters, drivers and links", () => {
-    expect(lines).toHaveLength(10)
-    expect(lines[2]).toBe('n2  perlin         octaves=2 scale=3 evolution<-n1.phase "Warp noise"')
-    expect(lines[5]).toBe("n5  warp           intensity=0.2 tiling=clamp in<-n4 map<-n2")
-    expect(lines[7]).toBe("n7  band           thresholds=[-0.08,0,0.13] in<-n6")
+    expect(lines).toHaveLength(11)
+    expect(lines[10]).toBe('n10  sheet_output   cols=4 name=fire_cel_green_sheet in<-n8 "Sheet"')
+    expect(lines[2]).toBe('n2   perlin         octaves=2 scale=3 evolution<-n1.phase "Warp noise"')
+    expect(lines[5]).toBe("n5   warp           intensity=0.2 tiling=clamp in<-n4 map<-n2")
+    expect(lines[7]).toBe("n7   band           thresholds=[-0.08,0,0.13] in<-n6")
   })
 
   it("full detail adds the defaults", () => {
