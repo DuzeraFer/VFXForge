@@ -82,6 +82,8 @@ Status: 1 to 4 are built. Loops are exact by construction (every frame number is
 
 **Accept**: one click (or one agent call) exports the fire sheet into the Unity project; it imports with correct settings and plays on a particle system with no manual steps.
 
+Status: 1 to 4 are built, except packed outputs (channel packing), which moves to Phase 6 with the Math nodes; the sidecar's `packing` field is always `null` for now. Export from the dialog, the agent's `export` tool and `vfxforge export` write the same files and are checked end to end. The Unity package in `unity/com.vfxforge.link` is written against Unity 2021.3 but has not been run in Unity yet, so the last half of the acceptance check is still to be confirmed on a real project.
+
 ## Phase 6 — Node library breadth (P1)
 
 Add the P1 nodes from 04, in this order, each with a golden test:

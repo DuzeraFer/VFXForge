@@ -269,13 +269,13 @@ export function ColorField({ value, onChange, label }: { value: Rgba; onChange: 
   )
 }
 
-export function Select({ value, options, onChange, label }: { value: string; options: readonly string[]; onChange: (value: string) => void; label?: string }): ReactElement {
+export function Select({ value, options, onChange, label, show }: { value: string; options: readonly string[]; onChange: (value: string) => void; label?: string; show?: (option: string) => string }): ReactElement {
   return (
     <label className="field field-select">
       <select value={value} aria-label={label} onChange={(e) => onChange(e.target.value)}>
         {options.map((option) => (
           <option key={option} value={option}>
-            {(option.charAt(0).toUpperCase() + option.slice(1)).replace(/_/g, " ")}
+            {show ? show(option) : (option.charAt(0).toUpperCase() + option.slice(1)).replace(/_/g, " ")}
           </option>
         ))}
       </select>

@@ -10,6 +10,8 @@ import { initGpu } from "../engine/gpu"
 import { compositeOver, isResultNode, renderFrame, renderSheet, resolveTarget, type Rgba8Image } from "../engine/render"
 import { registry } from "../nodes"
 import { decodeImage } from "../app/assets"
+import { renderExport } from "../export/render"
+import type { ExportImage } from "../export/types"
 import type { Job, JobImage, JobResult } from "./jobs"
 
 declare global {
@@ -45,12 +47,23 @@ function toJobImage(name: string, image: Rgba8Image): JobImage {
   return { name, width: image.width, height: image.height, data: new Uint8Array(image.data.buffer) }
 }
 
-async function run(job: Job): Promise<JobImage[]> {
+async function prepare(job: Job): Promise<{ engine: Engine; project: Project }> {
   const engine = await getEngine()
   const project = parseProject(job.projectText)
   for (const [ref, encoded] of Object.entries(job.assets ?? {})) {
     if (!engine.hasAsset(ref)) engine.setAsset(ref, await decodeImage(Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0))))
   }
+  return { engine, project }
+}
+
+async function exportJob(job: Job & { kind: "export" }): Promise<ExportImage[]> {
+  const { engine, project } = await prepare(job)
+  return renderExport(engine, project, registry, job.settings, job.projectName, job.only)
+}
+
+async function run(job: Job): Promise<JobImage[]> {
+  const { engine, project } = await prepare(job)
+  if (job.kind === "export") return []
 
   if (job.kind === "render") {
     const graph = pickGraph(project, job.graphId)
@@ -82,6 +95,7 @@ async function run(job: Job): Promise<JobImage[]> {
 
 window.vfxRunJob = async (job) => {
   try {
+    if (job.kind === "export") return { ok: true, images: [], exported: await exportJob(job) }
     return { ok: true, images: await run(job) }
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
