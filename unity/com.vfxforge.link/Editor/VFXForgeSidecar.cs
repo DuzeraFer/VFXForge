@@ -21,6 +21,15 @@ namespace VFXForge.Link
             public int padding;
         }
 
+        [Serializable]
+        public class Packing
+        {
+            public string r;
+            public string g;
+            public string b;
+            public string a;
+        }
+
         public string tool;
         public int version;
         public string texture;
@@ -29,6 +38,7 @@ namespace VFXForge.Link
         public Sheet sheet;
         public string alpha;
         public string usage;
+        public Packing packing;
 
         /// <summary>True when the texture is a sprite sheet. JsonUtility turns "sheet": null into an empty object.</summary>
         public bool IsSheet => sheet != null && sheet.cols > 0 && sheet.rows > 0;
@@ -36,7 +46,10 @@ namespace VFXForge.Link
         public bool Premultiplied => alpha == "premultiplied";
 
         /// <summary>Only color textures are stored in sRGB. Masks, erosion, flow and normal maps hold numbers.</summary>
-        public bool IsColor => string.IsNullOrEmpty(usage) || usage == "color";
+        /// <summary>True when each channel holds its own grayscale image.</summary>
+        public bool IsPacked => packing != null && !(string.IsNullOrEmpty(packing.r) && string.IsNullOrEmpty(packing.g) && string.IsNullOrEmpty(packing.b) && string.IsNullOrEmpty(packing.a));
+
+        public bool IsColor => !IsPacked && (string.IsNullOrEmpty(usage) || usage == "color");
 
         public int FrameCount => IsSheet ? Mathf.Clamp(sheet.frames > 0 ? sheet.frames : sheet.cols * sheet.rows, 1, sheet.cols * sheet.rows) : 1;
 

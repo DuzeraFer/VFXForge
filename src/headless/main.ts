@@ -7,7 +7,7 @@ import { parseProject } from "../doc/serialize"
 import type { Graph, Project } from "../doc/types"
 import { Engine } from "../engine/evaluator"
 import { initGpu } from "../engine/gpu"
-import { compositeOver, isResultNode, renderFrame, renderSheet, resolveTarget, type Rgba8Image } from "../engine/render"
+import { compositeOver, defaultResultName, isResultNode, renderFrame, renderSheet, resolveTarget, type Rgba8Image } from "../engine/render"
 import { registry } from "../nodes"
 import { decodeImage } from "../app/assets"
 import { renderExport } from "../export/render"
@@ -82,7 +82,7 @@ async function run(job: Job): Promise<JobImage[]> {
     useGraph(engine, graph, project)
     for (const node of graph.nodes.filter((n) => isResultNode(n.type))) {
       const target = resolveTarget(graph, registry, node.id)
-      const name = `${graph.name}.${String(node.params.name ?? (node.type === "output" ? "output" : "sheet"))}`
+      const name = `${graph.name}.${String(node.params.name ?? defaultResultName(node.type))}`
       images.push(toJobImage(name, await renderFrame(engine, target, 0)))
       if (graph.settings.frames > 1) {
         const mid = Math.floor(graph.settings.frames / 2)

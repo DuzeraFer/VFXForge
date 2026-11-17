@@ -33,6 +33,15 @@ An animated graph has frames > 1 (set_graph). Everything that moves is driven by
 
 End an animation with a \`sheet_output\` node instead of (or next to) \`output\`: it lays every frame out in one grid (cols 0 = squarest), with optional padding around each frame and color dilation under transparent pixels. Rendering it shows the whole sheet. \`random_flipbook\` makes a grid of seed variations of one image, and \`pattern_grid\` puts up to eight different images in one atlas. To judge motion, use \`render_frames\` on the node that feeds the sheet and \`measure\` with motion: true: loopSeamRatio near 1 means the step from the last frame to the first is like every other step.
 
+## More building blocks
+
+- Shapes for effects: anime_star (sparkles, impacts), slash_arc, burst, droplet, lightning, spline and trail (a texture laid along a spline; drive scroll with Time.phase).
+- Cartoon shading: rim_shade gives a lit rim and a shaded body from one mask; outline draws a line around it; glow adds a halo. Follow them with palette_remap.
+- Movement that loops: curl_distort, clouds, bnw_spots, band_noise and curl_noise all take evolution, where 0 to 1 is one seamless loop. histogram_scan with position driven by Time.phase dissolves a shape.
+- polar wraps a tiling noise into rings and vortexes; mirror with mode radial makes kaleidoscopes; make_tileable removes seams.
+- When no node does what you need, write it: pixel_expression takes a WGSL function body (see its doc in list_node_types), and value_expression takes a formula for driving parameters, e.g. 0.5 + 0.2 * sin(phase). A mistake in either comes back as a problem on the node, with the compiler's message.
+- packed_output stores a different gray image in each channel of one texture.
+
 ## Export
 
 When the artist asks for files, call \`export\`. It writes every Output and Sheet Output (or the ones you name) with a sidecar JSON next to each texture, which the Unity importer uses to set up the texture and a particle system's sheet animation. Leave \`folder\` out unless the artist named one.

@@ -6,7 +6,9 @@ The full spec lives in [`docs/`](docs/README.md). Build order and acceptance che
 
 ## Status
 
-**Phase 5 — Export and the Unity link.** **Export** writes every Output and Sheet Output as PNG, TGA, JPG, BMP or TIFF (8 or 16 bits), each with a `.vfxforge.json` that says how to import it. A small Unity package reads that file, sets the import settings and makes a Particle System play the sheet. Before it: sprite sheets, onion skins and the seam check (Phase 4), the AI Image node (Phase 3b), Claude editing the live graph through MCP (Phase 3) and the dark "Bench" editor (Phase 2). Next: more nodes.
+**Phase 6 — More nodes.** 49 new node types, 77 in all: cartoon shading (Rim Shade, Outline, Glow), shapes for effects (Anime Star, Slash Arc, Burst, Droplet, Lightning, Spline, Trail), distortion (Polar, Curl Distort, Twirl, Mirror, Make Tileable), blurs and other filters, patterns, more noises, and two nodes that take your own code: **Pixel Expression** (a WGSL snippet) and **Value Expression** (a formula). **Packed Output** puts a different image in each channel of one texture. Before it: export and the Unity link (Phase 5), sprite sheets (Phase 4), the AI Image node (Phase 3b), Claude editing the live graph through MCP (Phase 3) and the dark "Bench" editor (Phase 2). Next: functions, presets and the shipped recipes.
+
+![A slash built from the new nodes](docs/progress/phase-6-nodes.png)
 
 ![The Export dialog](docs/progress/phase-5-export.png)
 

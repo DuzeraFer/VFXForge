@@ -16,9 +16,14 @@ export type Target = { nodeId: string; output: string }
  * Accepts "nodeId.output", "nodeId" (its first output), the name of an Output
  * node, or nothing (the graph's first Output node).
  */
+/** The name a result node exports under when none was typed. */
+export function defaultResultName(type: string): string {
+  return type === "output" ? "output" : type === "packed_output" ? "packed" : "sheet"
+}
+
 /** Node types that mark a result of the graph. */
 export function isResultNode(type: string): boolean {
-  return type === "output" || type === "sheet_output"
+  return type === "output" || type === "sheet_output" || type === "packed_output"
 }
 
 export function resolveTarget(graph: Graph, registry: NodeRegistry, target?: string): Target {
@@ -39,7 +44,7 @@ export function resolveTarget(graph: Graph, registry: NodeRegistry, target?: str
     if (graph.nodes.some((n) => n.id === nodeId)) return { nodeId, output: target.slice(dot + 1) }
   }
   if (graph.nodes.some((n) => n.id === target)) return firstOutput(target)
-  const named = outputs.find((n) => (n.params.name ?? (n.type === "output" ? "output" : "sheet")) === target)
+  const named = outputs.find((n) => (n.params.name ?? defaultResultName(n.type)) === target)
   if (named) return firstOutput(named.id)
   throw new Error(`Graph "${graph.id}" has no node or output called "${target}".`)
 }

@@ -21,6 +21,7 @@ export type ExportTarget = {
   usage: string
   alpha: "straight" | "premultiplied"
   sheet: Sidecar["sheet"]
+  packing: Sidecar["packing"]
 }
 
 function paramsOf(node: Node, def: ResolvedNodeDef): Record<string, ParamValue> {
@@ -51,7 +52,19 @@ function sheetOf(graph: Graph, node: Node, registry: NodeRegistry): Sidecar["she
   return null
 }
 
-/** Every Output and Sheet Output of the project, in graph order. */
+/** What feeds each channel of a Packed Output. */
+function packingOf(graph: Graph, node: Node): Sidecar["packing"] {
+  if (node.type !== "packed_output") return null
+  const source = (channel: string): string | null => {
+    const link = graph.links.find((l) => l.to === `${node.id}.${channel}`)
+    const from = link && parseSocketRef(link.from)
+    const origin = from && graph.nodes.find((n) => n.id === from.nodeId)
+    return origin ? (origin.name ?? origin.type) : null
+  }
+  return { r: source("r"), g: source("g"), b: source("b"), a: source("a") }
+}
+
+/** Every Output, Sheet Output and Packed Output of the project, in graph order. */
 export function exportTargets(project: Project, registry: NodeRegistry): ExportTarget[] {
   const targets: ExportTarget[] = []
   for (const graph of project.graphs) {
@@ -64,9 +77,11 @@ export function exportTargets(project: Project, registry: NodeRegistry): ExportT
         graphName: graph.name,
         nodeId: node.id,
         name: String(params.name),
-        usage: String(params.usage),
+        // A packed texture holds numbers, not a picture.
+        usage: node.type === "packed_output" ? "mask" : String(params.usage),
         alpha: params.alpha === "premultiplied" ? "premultiplied" : "straight",
-        sheet: sheetOf(graph, node, registry)
+        sheet: sheetOf(graph, node, registry),
+        packing: packingOf(graph, node)
       })
     }
   }
@@ -142,7 +157,7 @@ export async function renderExport(
         sheet: target.sheet,
         alpha: target.alpha,
         usage: target.usage,
-        packing: null,
+        packing: target.packing,
         source: { project: projectName, graph: graph.name, seed: project.seed }
       }
     })

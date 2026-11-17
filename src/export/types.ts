@@ -25,7 +25,8 @@ export type Sidecar = {
   sheet: { cols: number; rows: number; frames: number; fps: number; loop: boolean; padding: number } | null
   alpha: "straight" | "premultiplied"
   usage: string
-  packing: null
+  /** For a Packed Output: what each channel holds (the source node's name or type), null for a channel filled with a constant. */
+  packing: { r: string | null; g: string | null; b: string | null; a: string | null } | null
   source: { project: string; graph: string; seed: number }
 }
 

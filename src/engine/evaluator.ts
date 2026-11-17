@@ -13,7 +13,7 @@ import { parseSocketRef, type Graph, type Node, type ParamValue } from "../doc/t
 import type { GpuContext } from "./gpu"
 import type { DataType, EvalContext, NodeRegistry, ResolvedNodeDef, SheetPlan } from "./nodeDef"
 import { createSheetBlitter, sheetSize, type SheetBlitter } from "./sheet"
-import { buildLayout, buildShader, GLOBALS_SIZE, packGlobals, packParams, variantKey, type InputBinding, type UniformLayout } from "./shader"
+import { buildLayout, buildShader, codeProblem, hashText, GLOBALS_SIZE, packGlobals, packParams, variantKey, type InputBinding, type UniformLayout } from "./shader"
 import { resolveGraph, type Problem, type ResolvedGraph } from "./validate"
 
 export class EvalError extends Error {
@@ -102,8 +102,12 @@ export class Engine {
   private readonly cacheBudget: number
   private readonly group0: GPUBindGroupLayout
   private readonly textureGroups = new Map<number, GPUBindGroupLayout>()
-  private pendingChecks: Promise<void>[] = []
+  /** Compilations still running. Everyone who settles waits for all of them, whoever started them. */
+  private readonly pendingChecks = new Set<Promise<void>>()
   private readonly shaderErrors = new Map<string, string>()
+  /** Pipelines whose shader failed to compile, by pipeline key, with the compiler's message. They are not tried again. */
+  private readonly broken = new Map<string, string>()
+  private lastShaderError = ""
   private readonly assets = new Map<string, Asset>()
   private assetVersion = 0
   private readonly assetListeners = new Set<() => void>()
@@ -484,23 +488,28 @@ export class Engine {
     return layout
   }
 
-  private pipelineFor(def: ResolvedNodeDef, layout: UniformLayout, bound: InputBinding, outputIndex: number, type: "gray" | "color"): Pipeline {
-    const key = `${variantKey(def, bound, outputIndex)}|${type}`
+  private pipelineFor(def: ResolvedNodeDef, layout: UniformLayout, bound: InputBinding, outputIndex: number, type: "gray" | "color", code?: string): Pipeline {
+    const key = `${variantKey(def, bound, outputIndex)}|${type}${code === undefined ? "" : `|${hashText(code)}`}`
+    const failed = this.broken.get(key)
+    if (failed !== undefined) throw new Error(failed)
     let entry = this.pipelines.get(key)
     if (!entry) {
-      const variant = buildShader(def, layout, bound, outputIndex)
+      const variant = buildShader(def, layout, bound, outputIndex, code)
       const module = this.gpu.device.createShaderModule({ label: key, code: variant.code })
       // Compile errors arrive asynchronously; `settle` reports them.
-      this.pendingChecks.push(
-        module.getCompilationInfo().then((info) => {
-          const errors = info.messages.filter((m) => m.type === "error")
-          if (errors.length > 0) {
-            const lines = variant.code.split("\n")
-            const text = errors.map((m) => `${m.message} (line: ${lines[m.lineNum - 1]?.trim() ?? ""})`).join("; ")
-            this.shaderErrors.set(def.type, text)
-          }
-        })
-      )
+      const check: Promise<void> = module
+        .getCompilationInfo()
+        .then((info) => {
+            const errors = info.messages.filter((m) => m.type === "error")
+            if (errors.length > 0) {
+              const lines = variant.code.split("\n")
+              const text = errors.map((m) => `${m.message} (line: ${lines[m.lineNum - 1]?.trim() ?? ""})`).join("; ")
+              this.shaderErrors.set(def.type, text)
+              this.broken.set(key, def.code !== undefined ? `The code does not compile: ${text}` : `Shader of node type "${def.type}" does not compile: ${text}`)
+            }
+          })
+        .finally(() => this.pendingChecks.delete(check))
+      this.pendingChecks.add(check)
       // Explicit layouts: every node gets the same group 0, whether or not its code reads each binding.
       const layouts = [this.group0, this.textureGroup(variant.textures.length)]
       const pipeline = this.gpu.device.createRenderPipeline({
@@ -529,7 +538,18 @@ export class Engine {
   ): void {
     const { device } = this.gpu
     const { layout } = this.compile(def)
-    const { pipeline, textures } = this.pipelineFor(def, layout, bound, outputIndex, type)
+    const code = def.code !== undefined ? String(params[def.code] ?? "") : undefined
+    if (code !== undefined) {
+      const problem = codeProblem(code)
+      if (problem) throw new EvalError(node.id, problem)
+    }
+    let found: Pipeline
+    try {
+      found = this.pipelineFor(def, layout, bound, outputIndex, type, code)
+    } catch (error) {
+      throw new EvalError(node.id, error instanceof Error ? error.message : String(error))
+    }
+    const { pipeline, textures } = found
     const { width, height } = this.graph!.settings
     const time = this.timeOf(ctx.frame)
 
@@ -587,15 +607,16 @@ export class Engine {
    * Call it before trusting pixels (readback does).
    */
   async settle(): Promise<void> {
-    const checks = this.pendingChecks.splice(0)
-    await Promise.all(checks)
+    while (this.pendingChecks.size > 0) await Promise.all([...this.pendingChecks])
     if (this.shaderErrors.size === 0) return
     const [[type, text]] = this.shaderErrors
     this.shaderErrors.clear()
     for (const key of [...this.pipelines.keys()]) if (key.startsWith(`${type}|`)) this.pipelines.delete(key)
     this.dispose()
     const node = this.graph?.nodes.find((n) => n.type === type)
-    throw new EvalError(node?.id ?? type, `Shader of node type "${type}" does not compile: ${text}`)
+    const def = this.registry.get(type)
+    this.lastShaderError = def?.code !== undefined ? `The code does not compile: ${text}` : `Shader of node type "${type}" does not compile: ${text}`
+    throw new EvalError(node?.id ?? type, this.lastShaderError)
   }
 
   /** Drops least recently used textures over budget. Textures touched by the current call are kept. */
@@ -616,6 +637,11 @@ export class Engine {
   /** Reads an image back as RGBA floats, row by row from the top. Gray is expanded to r = g = b, a = 1. */
   async readPixels(image: ImageResult): Promise<Float32Array> {
     await this.settle()
+    // Someone else sharing this engine (the preview, thumbnails) may have been told about a
+    // shader error first; the textures made with it are gone either way.
+    if (this.cache.get(image.key)?.result !== image) {
+      throw new EvalError("", this.lastShaderError || "The image was dropped before it could be read. Render it again.")
+    }
     const { device } = this.gpu
     const { width, height, type } = image
     const bytesPerPixel = BYTES_PER_PIXEL[type]
