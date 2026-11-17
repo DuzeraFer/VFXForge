@@ -211,7 +211,8 @@ export type InputBinding = Record<string, DataType | null>
 function inputsWgsl(def: ResolvedNodeDef, bound: InputBinding): { code: string; textures: string[] } {
   const parts: string[] = ["@group(0) @binding(2) var input_sampler: sampler;"]
   const textures: string[] = []
-  for (const name of Object.keys(def.inputs)) {
+  // A node's image file is read like one more input, named "asset".
+  for (const name of def.asset !== undefined ? [...Object.keys(def.inputs), "asset"] : Object.keys(def.inputs)) {
     const type = bound[name] ?? null
     if (type === null) {
       parts.push(`const has_${name}: bool = false;`, `fn sample_${name}(uv: vec2f) -> vec4f { return vec4f(0.0); }`)
@@ -278,5 +279,6 @@ export function buildShader(def: ResolvedNodeDef, layout: UniformLayout, bound: 
 
 export function variantKey(def: ResolvedNodeDef, bound: InputBinding, outputIndex: number): string {
   const inputs = Object.keys(def.inputs).map((name) => (bound[name] ?? "-")[0])
+  if (def.asset !== undefined) inputs.push(bound.asset ? "a" : "-")
   return `${def.type}|${outputIndex}|${inputs.join("")}`
 }

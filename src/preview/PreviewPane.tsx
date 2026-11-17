@@ -124,6 +124,10 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
   }, [gpu, canvas])
   useEffect(() => () => presenter?.destroy(), [presenter])
 
+  // Image files load in the background; redraw when one arrives.
+  const [assetRevision, setAssetRevision] = useState(0)
+  useEffect(() => engine?.onAssets(() => setAssetRevision((n) => n + 1)), [engine])
+
   // Redraw whenever what is shown, or how, changes. The engine's cache makes
   // an unchanged image a lookup.
   useEffect(() => {
@@ -149,7 +153,7 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
     return () => {
       stale = true
     }
-  }, [engine, presenter, graph, projectSeed, target, frame, channel, repeats, width, height])
+  }, [engine, presenter, graph, projectSeed, target, frame, channel, repeats, width, height, assetRevision])
 
   const zoomBy = (factor: number): void => {
     const next = Math.min(32, Math.max(0.05, scale * factor))

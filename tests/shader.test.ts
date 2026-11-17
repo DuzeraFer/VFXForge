@@ -57,3 +57,30 @@ describe("uniform layout", () => {
     expect(view.getUint32(at.ramp_count, true)).toBe(2)
   })
 })
+
+describe("image files", () => {
+  it("are read like one more input, bound only when loaded", async () => {
+    const { buildShader, variantKey } = await import("../src/engine/shader")
+    const { defineNode } = await import("../src/engine/nodeDef")
+    const def = defineNode({
+      type: "picture",
+      category: "Test",
+      doc: "Test node.",
+      inputs: {},
+      outputs: { out: "color" },
+      params: { file: { type: "string", default: "" } },
+      asset: "file",
+      wgsl: "fn node(uv: vec2f) -> vec4f { return sample_asset(uv); }"
+    })
+    expect(def.params.tiling).toBeDefined()
+    const layout = buildLayout(def.params)
+    const empty = buildShader(def, layout, {}, 0)
+    expect(empty.textures).toEqual([])
+    expect(empty.code).toContain("const has_asset: bool = false;")
+    const loaded = buildShader(def, layout, { asset: "color" }, 0)
+    expect(loaded.textures).toEqual(["asset"])
+    expect(loaded.code).toContain("var tex_asset: texture_2d<f32>;")
+    expect(variantKey(def, {}, 0)).not.toBe(variantKey(def, { asset: "color" }, 0))
+    expect(() => defineNode({ ...def, type: "bad", asset: "missing", inputs: {}, params: { file: { type: "string", default: "" } } })).toThrow(/string parameter/)
+  })
+})

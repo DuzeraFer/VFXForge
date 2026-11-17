@@ -1,0 +1,281 @@
+{
+ "version": 1,
+ "name": "image",
+ "seed": 3,
+ "graphs": [
+  {
+   "id": "g1",
+   "name": "image_sample",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "a",
+     "type": "image_sample",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "file": "images/c4908969cd130ff5.png"
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    },
+    {
+     "id": "o2",
+     "type": "output",
+     "position": [
+      200,
+      160
+     ],
+     "params": {
+      "name": "alpha"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "a.out",
+     "to": "o.in"
+    },
+    {
+     "from": "a.alpha",
+     "to": "o2.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g2",
+   "name": "ai_image_mask",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "a",
+     "type": "ai_image",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "prompt": "a test disc",
+      "mode": "mask",
+      "image": "ai/c4908969cd130ff5.png"
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    },
+    {
+     "id": "o2",
+     "type": "output",
+     "position": [
+      200,
+      160
+     ],
+     "params": {
+      "name": "mask"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "a.out",
+     "to": "o.in"
+    },
+    {
+     "from": "a.mask",
+     "to": "o2.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g3",
+   "name": "image_missing",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "a",
+     "type": "image_sample",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "file": "images/0000000000000000.png"
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "a.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g4",
+   "name": "ai_image_banded",
+   "settings": {
+    "width": 96,
+    "height": 96,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "a",
+     "type": "ai_image",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "prompt": "a test disc",
+      "image": "ai/c4908969cd130ff5.png"
+     }
+    },
+    {
+     "id": "b",
+     "type": "band",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "thresholds": [
+       0.25,
+       0.75
+      ]
+     }
+    },
+    {
+     "id": "c",
+     "type": "palette_remap",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0,
+         0,
+         0,
+         0
+        ]
+       },
+       {
+        "position": 0.5,
+        "color": [
+         0.9,
+         0.3,
+         0.1,
+         1
+        ]
+       },
+       {
+        "position": 1,
+        "color": [
+         1,
+         0.9,
+         0.5,
+         1
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "a.mask",
+     "to": "b.in"
+    },
+    {
+     "from": "b.out",
+     "to": "c.in"
+    },
+    {
+     "from": "c.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  }
+ ],
+ "functions": [],
+ "gradients": [],
+ "references": [],
+ "comments": []
+}

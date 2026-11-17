@@ -57,6 +57,8 @@ Texture sources made by an image model, as a normal node (04 §4.1, 06 §6.11). 
 4. Results saved as PNG in the project assets folder, so a project opens, renders and exports without a network or a key.
 5. Agent access: the prompt is an ordinary parameter (`set_params`); a `generate_image` tool starts generation, behind an "allow the agent to generate images" setting with a per-session limit.
 
+Status: built and checked end to end against a stand-in for OpenAI on the test machine. Not yet run against the real API (that needs the artist's key).
+
 **Accept**: with a key set, typing "stylized flame silhouette, white on black" and pressing Generate gives a texture that feeds Band and Palette Remap like any other node; Claude can write the prompt and trigger generation through MCP; the saved project reopens offline with the same image.
 
 ## Phase 4 — Animation and sprite sheets

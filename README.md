@@ -6,7 +6,18 @@ The full spec lives in [`docs/`](docs/README.md). Build order and acceptance che
 
 ## Status
 
-**Phase 3 — Agent link.** Claude can now build and edit graphs in the running app through MCP while you watch: its nodes arrive with a clay outline, every step is one entry in the activity log, and each can be undone on its own. The editor from Phase 2 (canvas, inspector, gradient editor, Preview, timeline, history) is in the dark "Bench" design. Next: the AI Image node (Phase 3b), then animation and sprite sheets.
+**Phase 3b — AI Image node.** A new source node draws a picture from a prompt with OpenAI's Images API on your own key, and feeds the graph like any other texture. Before it: Claude builds and edits graphs in the running app through MCP while you watch (Phase 3), in the dark "Bench" editor (Phase 2). Next: animation and sprite sheets.
+
+## AI images
+
+Add an **AI Image** node (Library › Sources), write a prompt and press **Generate**. Mode *transparent* asks the model for a transparent background; mode *mask* asks for a bright subject on black and turns brightness into alpha. The node outputs the picture and a grayscale mask, so Band and Palette Remap can turn it into flat cel tones.
+
+- **Your key.** Enter your OpenAI API key once in Settings (the sliders button in the title bar). It is encrypted with the operating system's keychain in the app's settings folder. It is sent only to `api.openai.com`; it is never written into a project, never given to the editor window, and agents cannot read it.
+- **Your pictures.** Each result is saved as a PNG in `<project>.assets/ai/` next to the `.vfxf`. Opening, rendering and exporting a project never needs the network or the key. Keep that folder with the project when you move it.
+- **Cost.** Nothing is generated until you press Generate. Agents can write the prompt, but can only generate if you turn on "Let agents generate images" in Settings, and then only a few times per session.
+- **Model.** The default is `gpt-image-2`; change it in Settings when OpenAI releases a newer one. If a model refuses transparent backgrounds, use mask mode.
+
+The **Image Sample** node does the same for a PNG, JPEG or WebP of your own.
 
 ## Connect Claude
 
@@ -22,7 +33,7 @@ Then ask Claude Code something like "build a cel-shaded fire in VFXForge". The a
 - If it is not, the same command works without a window: `VFXForge.exe mcp project.vfxf` opens that project, and `save_project` writes it back.
 - Clients that speak HTTP can connect to the `url` in `mcp.json` with the header `Authorization: Bearer <token>`.
 
-Tools: `get_guide`, `get_basic_info`, `get_selection`, `get_graph`, `get_node`, `list_node_types`, `get_history`, `render`, `render_frames`, `measure`, `apply`, `create_graph`, `set_selection`, `save_project`, `finish_working`. See `docs/05-ai-integration.md`.
+Tools: `get_guide`, `get_basic_info`, `get_selection`, `get_graph`, `get_node`, `list_node_types`, `get_history`, `render`, `render_frames`, `measure`, `apply`, `create_graph`, `generate_image`, `set_selection`, `save_project`, `finish_working`. See `docs/05-ai-integration.md`.
 
 ![Cel fire sheet rendered by the engine](docs/progress/phase-1-cel-fire.png)
 

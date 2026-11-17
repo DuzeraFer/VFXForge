@@ -306,3 +306,27 @@ export function TextField({ value, onChange, label }: { value: string; onChange:
     </span>
   )
 }
+
+/** Several lines of text. Commits when focus leaves, or with Ctrl+Enter. */
+export function TextArea({ value, onChange, label, placeholder, rows = 4 }: { value: string; onChange: (value: string) => void; label?: string; placeholder?: string; rows?: number }): ReactElement {
+  const [text, setText] = useState<string | null>(null)
+  const commit = (): void => {
+    if (text !== null && text !== value) onChange(text)
+    setText(null)
+  }
+  return (
+    <textarea
+      className="field-area"
+      rows={rows}
+      value={text ?? value}
+      aria-label={label}
+      placeholder={placeholder}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) e.currentTarget.blur()
+        else if (e.key === "Escape") setText(null)
+      }}
+    />
+  )
+}

@@ -1,5 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell, type MenuItemConstructorOptions } from "electron"
+import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, shell, type MenuItemConstructorOptions } from "electron"
 import { join, resolve } from "node:path"
+import type { AiGenerateResult, AiImageRequest, AiStatus } from "../src/ai/imageOptions"
+import { aiStatus, clearKey, createAgentBudget, generateImage, readSettings, saveKey, writeSettings, type AiSettings, type KeyCrypto } from "./ai"
+import { adoptAssets, assetsDir, IMAGE_EXTENSIONS, importAsset, pruneHolding, readAsset, referencedAssets, storeAsset } from "./assets"
 import { openProject, saveProject, writeAutosave, type OpenedProject } from "./files"
 import { HEADLESS_COMMANDS, runHeadless, type HeadlessCommand } from "./headless"
 import { createMcpHandler, createToolRunner, runStdioShim, startMcpServer, type McpServer } from "./mcp"
@@ -99,16 +102,95 @@ ipcMain.handle("project:startup", (): OpenedProject | null => {
   }
 })
 
-ipcMain.handle("project:save", (_event, path: string, text: string): void => {
+// ── Image files of the project (docs/06 §6.11) ────────────
+
+/** Where images of a project that was never saved wait until it is. */
+const holdingDir = (): string => join(app.getPath("userData"), "unsaved-assets")
+/** Where a project's images are looked for, in order. */
+const assetDirs = (projectPath: string | null): string[] => (projectPath ? [assetsDir(projectPath), holdingDir()] : [holdingDir()])
+/** Where new images of a project go. */
+const assetHome = (projectPath: string | null): string => (projectPath ? assetsDir(projectPath) : holdingDir())
+
+/** Saves the project and makes sure the images it refers to sit next to it. */
+function saveWithAssets(path: string, text: string, previousPath: string | null): void {
+  const sources = previousPath && previousPath !== path ? [assetsDir(previousPath), holdingDir()] : [holdingDir()]
+  adoptAssets(assetsDir(path), sources, referencedAssets(text))
   saveProject(path, text)
+}
+
+ipcMain.handle("project:save", (_event, path: string, text: string): void => {
+  saveWithAssets(path, text, path)
 })
 
-ipcMain.handle("project:saveAs", async (event, text: string, suggestedName: string): Promise<string | null> => {
+ipcMain.handle("project:saveAs", async (event, text: string, suggestedName: string, previousPath: string | null): Promise<string | null> => {
   const win = BrowserWindow.fromWebContents(event.sender)!
-  const result = await dialog.showSaveDialog(win, { defaultPath: `${suggestedName}.vfxf`, filters: FILE_FILTERS })
+  // Tests cannot click through a native dialog.
+  const preset = process.env.VFXFORGE_TEST_SAVE_AS
+  const result = preset ? { canceled: false, filePath: preset } : await dialog.showSaveDialog(win, { defaultPath: `${suggestedName}.vfxf`, filters: FILE_FILTERS })
   if (result.canceled || !result.filePath) return null
-  saveProject(result.filePath, text)
+  saveWithAssets(result.filePath, text, previousPath)
   return result.filePath
+})
+
+ipcMain.handle("asset:read", (_event, projectPath: string | null, ref: string): Uint8Array | null => {
+  return readAsset(assetDirs(projectPath), ref)
+})
+
+ipcMain.handle("asset:import", async (event, projectPath: string | null): Promise<string | null> => {
+  const win = BrowserWindow.fromWebContents(event.sender)!
+  const result = await dialog.showOpenDialog(win, { properties: ["openFile"], filters: [{ name: "Images", extensions: [...IMAGE_EXTENSIONS] }] })
+  if (result.canceled || result.filePaths.length === 0) return null
+  return importAsset(assetHome(projectPath), result.filePaths[0])
+})
+
+// ── AI images. The key stays in this process. ─────────────
+
+const keyCrypto: KeyCrypto = {
+  available: () => safeStorage.isEncryptionAvailable(),
+  encrypt: (text) => safeStorage.encryptString(text),
+  decrypt: (data) => safeStorage.decryptString(data)
+}
+const userData = (): string => app.getPath("userData")
+// Linux test machines have no keychain. Tests there (and only there) may fall back to Chromium's built-in key.
+if (process.platform === "linux" && process.env.VFXFORGE_TEST_KEYSTORE === "basic") {
+  void app.whenReady().then(() => safeStorage.setUsePlainTextEncryption(true))
+}
+const agentBudget = createAgentBudget()
+
+ipcMain.handle("ai:status", (): AiStatus => aiStatus(userData(), keyCrypto))
+
+ipcMain.handle("ai:setKey", (_event, key: unknown): { status: AiStatus; error?: string } => {
+  try {
+    saveKey(userData(), keyCrypto, typeof key === "string" ? key : "")
+    return { status: aiStatus(userData(), keyCrypto) }
+  } catch (error) {
+    return { status: aiStatus(userData(), keyCrypto), error: error instanceof Error ? error.message : "The key could not be saved." }
+  }
+})
+
+ipcMain.handle("ai:clearKey", (): AiStatus => {
+  clearKey(userData())
+  return aiStatus(userData(), keyCrypto)
+})
+
+ipcMain.handle("ai:setSettings", (_event, patch: Partial<AiSettings>): AiStatus => {
+  writeSettings(userData(), patch)
+  return aiStatus(userData(), keyCrypto)
+})
+
+/** `agentSession` is set when an agent asked for the picture: that needs the artist's opt-in and counts against the limit. */
+ipcMain.handle("ai:generate", async (_event, projectPath: string | null, request: AiImageRequest, agentSession?: string): Promise<AiGenerateResult> => {
+  if (agentSession !== undefined) {
+    const refused = agentBudget.take(agentSession, readSettings(userData()))
+    if (refused) return { ok: false, error: refused }
+  }
+  try {
+    const png = await generateImage(userData(), keyCrypto, request)
+    return { ok: true, ref: storeAsset(assetHome(projectPath), "ai", png, "png") }
+  } catch (error) {
+    if (agentSession !== undefined) agentBudget.refund(agentSession)
+    return { ok: false, error: error instanceof Error ? error.message : "The picture could not be generated." }
+  }
 })
 
 ipcMain.handle("project:autosave", (_event, path: string, text: string): void => {
@@ -187,6 +269,11 @@ if (headlessCommand) {
 } else {
   void app.whenReady().then(async () => {
     Menu.setApplicationMenu(buildMenu())
+    try {
+      pruneHolding(holdingDir(), 30 * 24 * 3600 * 1000)
+    } catch {
+      // Housekeeping only.
+    }
     createWindow()
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()

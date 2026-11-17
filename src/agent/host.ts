@@ -13,6 +13,7 @@ import { compositeOver, resolveTarget, sheetLayout, type Rgba8Image, type Target
 import { resolveGraph, type Problem } from "../engine/validate"
 import { nodeDefs, registry } from "../nodes"
 import { graphText } from "./graphText"
+import { generateFor } from "../ai/generation"
 import { GUIDE } from "./guide"
 import { placeNewNodes } from "./place"
 import { TOOL_SPECS } from "./toolSpecs"
@@ -461,6 +462,16 @@ export async function runTool(agent: AgentIdentity, name: string, args: Args): P
         return await measure(args)
       case "apply":
         return apply(agent, args)
+      case "generate_image": {
+        const graph = graphOf(args)
+        const nodeId = typeof args.nodeId === "string" ? args.nodeId : ""
+        const node = graph.nodes.find((n) => n.id === nodeId)
+        if (!node) throw new ToolError(`Graph ${graph.id} has no node "${nodeId}".`)
+        if (node.type !== "ai_image") throw new ToolError(`${nodeId} is a ${node.type} node. Only ai_image nodes generate pictures.`)
+        const problem = await generateFor(graph, nodeId, { kind: "agent", ...agent })
+        if (problem) throw new ToolError(problem)
+        return text(`Generated a new picture for ${nodeId}. Render ${nodeId} (and ${nodeId}.mask) to look at it before building on it.`)
+      }
       case "create_graph": {
         const { project } = session.getState()
         const id = nextId(project.graphs.map((g) => g.id), "g")

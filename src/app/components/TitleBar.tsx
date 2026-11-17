@@ -2,6 +2,7 @@ import type { ReactElement } from "react"
 import type { ThemeName } from "../hooks/useTheme"
 import { session } from "../session"
 import { Icon } from "./Icon"
+import { openSettings } from "./Settings"
 
 export type Tab = { id: string; title: string; kind: "home" | "graph" }
 
@@ -59,6 +60,9 @@ export function TitleBar({ tabs, activeTab, onSelectTab, theme, onToggleTheme, a
             Connect Claude
           </button>
         )}
+        <button className="icon-button" onClick={openSettings} title="Settings" aria-label="Settings">
+          <Icon name="gear" />
+        </button>
         <button
           className="icon-button"
           onClick={onToggleTheme}
