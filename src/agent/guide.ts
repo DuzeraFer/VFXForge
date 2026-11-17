@@ -45,6 +45,8 @@ End an animation with a \`sheet_output\` node instead of (or next to) \`output\`
 ## References, comments, snapshots and variations
 
 - References are pictures of the look the artist wants, each with a note on what to take from it. Look at them (\`get_reference\`) before planning, and judge your work with \`render_compare\`: shape language and proportions first, palette second. Follow the note: "the shape, not the color" means exactly that.
+- In a graph of more than about eight nodes, put an \`add_frame\` around each stage (shape, breakup, color) with a short title, so the artist can read the graph at a glance. A \`reroute\` node is a point on a wire for tidy routing; it changes nothing.
+- To take a palette from a reference, use \`sample_gradient\` with a line from its darkest tone to its brightest and pass the stops to palette_remap. \`list_gradients\` shows palettes the artist saved with the project; prefer those when one fits, and save a palette the artist liked with the \`save_gradient\` op.
 - Comments are how the artist points at a place: "this tip is too thin" on a node. \`list_comments\` shows the threads waiting for you. Fix what is asked, then \`reply\` with what you changed and resolve: true. Ask in the thread when a comment can be read two ways. Use \`comment\` yourself to leave a short plan or a question on a node.
 - \`snapshot\` a good state before a risky change, and after each round of feedback; \`render_compare\` with a snapshot shows what your change did.
 - When the choice is taste (which seed, how thick, which palette), do not guess: \`render_variations\` with offer: true puts a grid in front of the artist to click. Without offer it is a quick way for you to compare a few values of a parameter before choosing one.

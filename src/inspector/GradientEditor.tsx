@@ -3,6 +3,10 @@ import type { GradientStop } from "../doc/types"
 import { MAX_GRADIENT_STOPS } from "../engine/nodeDef"
 import { Icon } from "../app/components/Icon"
 import { ColorField, newGesture, NumberField, Slider, type OnChange } from "./fields"
+import { projectGradients } from "../doc/board"
+import { deleteProjectGradient, saveProjectGradient } from "../app/board"
+import { useSession } from "../app/session"
+import { GradientFromPicture } from "./GradientFromPicture"
 import { GRADIENT_PRESETS, sampleGradient, spaceEvenly } from "./gradient"
 
 type Props = { value: GradientStop[]; onChange: OnChange<GradientStop[]> }
@@ -20,6 +24,14 @@ export function GradientEditor({ value, onChange }: Props): ReactElement {
   const trackRef = useRef<HTMLDivElement>(null)
   const drag = useRef<{ index: number; gesture: string } | null>(null)
   const [selected, setSelected] = useState(0)
+  const { project } = useSession()
+  const saved = projectGradients(project)
+  const [saving, setSaving] = useState<string | null>(null)
+  const [picking, setPicking] = useState(false)
+  const load = (stops: GradientStop[]): void => {
+    onChange(stops.map((s) => ({ ...s })), newGesture())
+    setSelected(0)
+  }
   const index = Math.min(selected, value.length - 1)
   const stop = value[index]
 
@@ -116,18 +128,32 @@ export function GradientEditor({ value, onChange }: Props): ReactElement {
           <select
             value=""
             aria-label="Gradient library"
+            data-testid="gradient-library"
             onChange={(e) => {
-              const preset = GRADIENT_PRESETS.find((p) => p.name === e.target.value)
-              if (preset) {
-                onChange(preset.stops, newGesture())
-                setSelected(0)
-              }
+              const [kind, name] = [e.target.value.slice(0, 1), e.target.value.slice(2)]
+              const found = kind === "p" ? saved.find((g) => g.name === name) : GRADIENT_PRESETS.find((p) => p.name === name)
+              if (!found) return
+              load(found.stops)
+              if (kind === "p") setSaving(name)
             }}
           >
             <option value="">Load a gradient…</option>
-            {GRADIENT_PRESETS.map((preset) => (
-              <option key={preset.name}>{preset.name}</option>
-            ))}
+            {saved.length > 0 && (
+              <optgroup label="This project">
+                {saved.map((g) => (
+                  <option key={g.id} value={`p:${g.name}`}>
+                    {g.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            <optgroup label="Built in">
+              {GRADIENT_PRESETS.map((preset) => (
+                <option key={preset.name} value={`b:${preset.name}`}>
+                  {preset.name}
+                </option>
+              ))}
+            </optgroup>
           </select>
           <span className="field-caret">⌄</span>
         </label>
@@ -135,6 +161,44 @@ export function GradientEditor({ value, onChange }: Props): ReactElement {
           Even
         </button>
       </div>
+      <div className="param-row">
+        <span className="param-label" />
+        <button className="text-button" data-on={saving !== null || undefined} data-testid="gradient-save-toggle" title="Keep this gradient with the project, to use on other nodes" onClick={() => setSaving(saving === null ? "" : null)}>
+          Save to project
+        </button>
+        <button
+          className="text-button"
+          data-testid="gradient-from-picture"
+          disabled={project.references.length === 0}
+          title={project.references.length === 0 ? "Add a picture under References first" : "Read the colors along a line across a reference picture"}
+          onClick={() => setPicking(true)}
+        >
+          From a picture…
+        </button>
+      </div>
+      {saving !== null && (
+        <form
+          className="param-row"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (saveProjectGradient(saving, value)) setSaving(saving.trim())
+          }}
+        >
+          <span className="param-label">Name</span>
+          <label className="field field-grow">
+            <input className="field-input" value={saving} maxLength={60} placeholder="Fire, toxic green…" aria-label="Gradient name" data-testid="gradient-name" onChange={(e) => setSaving(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
+          </label>
+          <button className="text-button" type="submit" disabled={saving.trim() === ""} data-testid="gradient-save">
+            {saved.some((g) => g.name === saving.trim()) ? "Replace" : "Save"}
+          </button>
+          {saved.some((g) => g.name === saving.trim()) && (
+            <button className="icon-button" type="button" title="Remove this gradient from the project" aria-label="Remove this gradient from the project" data-testid="gradient-forget" onClick={() => deleteProjectGradient(saving.trim())}>
+              <Icon name="trash" size={14} />
+            </button>
+          )}
+        </form>
+      )}
+      {picking && <GradientFromPicture onPick={load} onClose={() => setPicking(false)} />}
     </div>
   )
 }

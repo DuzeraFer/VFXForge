@@ -1925,3 +1925,198 @@ kbd,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ── Gradient from a picture ───────────────────────────── */
+
+.gradient-picture {
+  display: grid;
+  place-items: center;
+  padding: var(--space-2);
+  border-radius: var(--radius-field);
+  background: var(--color-field);
+}
+.gradient-picture-frame {
+  position: relative;
+  line-height: 0;
+  cursor: crosshair;
+  touch-action: none;
+}
+.gradient-picture-frame canvas {
+  max-width: 100%;
+  max-height: 46vh;
+}
+.gradient-picture-frame svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.gradient-picture-frame line {
+  stroke: #fff;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 1px #000);
+}
+.gradient-picture-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #000;
+  pointer-events: none;
+}
+.gradient-picture-dot[data-end] {
+  background: var(--color-select);
+}
+
+/* ── Frames and reroute points ─────────────────────────── */
+
+.frame {
+  --frame-color: var(--color-ink-faint);
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  border: 1px solid color-mix(in srgb, var(--frame-color) 55%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--frame-color) 9%, transparent);
+  pointer-events: none;
+}
+.frame[data-color="blue"] {
+  --frame-color: #5b9dff;
+}
+.frame[data-color="green"] {
+  --frame-color: #4fc27a;
+}
+.frame[data-color="amber"] {
+  --frame-color: #e6a23c;
+}
+.frame[data-color="red"] {
+  --frame-color: #e5605a;
+}
+.frame[data-color="violet"] {
+  --frame-color: #a583f0;
+}
+.frame-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  pointer-events: auto;
+}
+.frame-title,
+.frame-title-input {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--frame-color) 60%, var(--color-ink));
+}
+.frame-title-input {
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--color-field);
+  color: var(--color-ink);
+}
+.frame-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--frame-color);
+}
+.frame-remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  color: var(--color-ink-muted);
+}
+.frame-swatch,
+.frame-remove {
+  opacity: 0;
+}
+.frame-header:hover .frame-swatch,
+.frame-header:hover .frame-remove {
+  opacity: 1;
+}
+.frame-remove:hover {
+  color: var(--color-ink);
+  background: var(--color-raised);
+}
+.frame-note {
+  margin: 0;
+  padding: 0 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-ink-muted);
+}
+
+.reroute-dot {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: 50%;
+  background: var(--color-surface);
+}
+.reroute-dot:hover {
+  border-color: var(--color-ink-muted);
+}
+.reroute-dot[data-selected] {
+  border-color: var(--color-select);
+  box-shadow: 0 0 0 0.5px var(--color-select);
+}
+.graph-canvas[data-tool="reroute"] .react-flow__edge {
+  cursor: copy;
+}
+
+/* ── Hotkeys in Settings ───────────────────────────────── */
+
+.hotkey-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px var(--space-3);
+}
+.hotkey-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  height: 26px;
+  font-size: 11px;
+}
+.hotkey-key {
+  min-width: 56px;
+  padding: 2px 8px;
+  border: var(--hairline);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
+  color: var(--color-ink);
+  background: var(--color-field);
+}
+.hotkey-key:hover {
+  border-color: var(--color-hairline-strong);
+}
+.hotkey-key[data-recording] {
+  border-color: var(--color-select);
+  color: var(--color-select);
+}
+.hotkey-key[data-custom] {
+  color: var(--color-select);
+}
+.dialog-problem {
+  color: var(--color-danger);
+}

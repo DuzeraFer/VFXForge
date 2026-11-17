@@ -3,6 +3,7 @@ import {
   BackgroundVariant,
   ReactFlow,
   ReactFlowProvider,
+  ViewportPortal,
   useNodesInitialized,
   useReactFlow,
   type Connection,
@@ -20,12 +21,16 @@ import {
   copySelection,
   deleteNodes,
   duplicateSelection,
+  frameSelection,
+  insertReroute,
   setViewCenterProvider,
   paste,
   toggleBypass,
   type PendingWire
 } from "../app/commands"
 import { session, type AgentState } from "../app/session"
+import { actionFor } from "../app/hotkeys"
+import { Frames } from "./Frames"
 import { parseSocketRef, type CommentThread, type Graph, type Op } from "../doc"
 import { isDrivable, type DataType } from "../engine/nodeDef"
 import type { ResolvedGraph } from "../engine/validate"
@@ -215,6 +220,13 @@ function Canvas({ graph, resolved, selection, pinnedNodeId, tool, agent, comment
     [graph, resolved]
   )
 
+  // A reroute point goes where the wire was clicked. Wires that drive a parameter carry a number, not a picture.
+  const addPoint = (event: { clientX: number; clientY: number }, edge: Edge): void => {
+    if (!edge.id.startsWith("link:")) return session.say("Reroute points go on image wires.")
+    const at = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY })
+    insertReroute(edge.id.slice("link:".length), [at.x, at.y])
+  }
+
   const closeSearch = useCallback(() => setSearch(null), [])
 
   const openSearch = useCallback(
@@ -269,23 +281,24 @@ function Canvas({ graph, resolved, selection, pinnedNodeId, tool, agent, comment
       const mod = event.ctrlKey || event.metaKey
       const key = event.key.toLowerCase()
       const { selection: selected } = session.getState()
-      if ((event.key === " " || event.key === "Tab") && !mod && pointer.current.inside) {
+      const action = actionFor(event)
+      if ((action === "node.search" || (event.key === "Tab" && !mod)) && pointer.current.inside) {
         event.preventDefault()
         openSearch(pointer.current.x, pointer.current.y, null)
-      } else if (mod && key === "d") {
+      } else if (action === "node.duplicate") {
         event.preventDefault()
         duplicateSelection()
-      } else if (mod && key === "c") copySelection()
-      else if (mod && key === "v") paste()
-      else if (mod && key === "a") {
+      } else if (action === "select.all") {
         event.preventDefault()
         session.select(graph.nodes.map((n) => n.id))
-      } else if (mod || event.altKey) return
-      else if (key === "f") void flow.fitView({ padding: "48px", maxZoom: 1.5, duration: 150, nodes: selected.length > 0 ? selected.map((id) => ({ id })) : undefined })
-      else if (key === "a") void flow.fitView({ padding: "48px", maxZoom: 1, duration: 150 })
-      else if (key === "l") autoAlign()
-      else if (key === "b") toggleBypass()
-      else if (key === "1" && selected.length === 1) session.togglePin(selected[0])
+      } else if (action === "view.fitSelection") void flow.fitView({ padding: "48px", maxZoom: 1.5, duration: 150, nodes: selected.length > 0 ? selected.map((id) => ({ id })) : undefined })
+      else if (action === "view.fitAll") void flow.fitView({ padding: "48px", maxZoom: 1, duration: 150 })
+      else if (action === "graph.align") autoAlign()
+      else if (action === "node.bypass") toggleBypass()
+      else if (action === "node.frame") frameSelection()
+      else if (action === "node.pin" && selected.length === 1) session.togglePin(selected[0])
+      else if (mod && key === "c") copySelection()
+      else if (mod && key === "v") paste()
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
@@ -295,6 +308,7 @@ function Canvas({ graph, resolved, selection, pinnedNodeId, tool, agent, comment
     <div
       ref={wrapRef}
       className="graph-canvas"
+      data-tool={tool}
       onPointerMove={(e) => (pointer.current = { x: e.clientX, y: e.clientY, inside: true })}
       onPointerLeave={() => (pointer.current.inside = false)}
     >
@@ -309,6 +323,8 @@ function Canvas({ graph, resolved, selection, pinnedNodeId, tool, agent, comment
         onConnectEnd={onConnectEnd}
         isValidConnection={isValidConnection}
         onBeforeDelete={onBeforeDelete}
+        onEdgeDoubleClick={(e, edge) => addPoint(e, edge)}
+        onEdgeClick={(e, edge) => tool === "reroute" && addPoint(e, edge)}
         onDoubleClick={(e) => {
           if ((e.target as HTMLElement).classList.contains("react-flow__pane")) openSearch(e.clientX, e.clientY, null)
         }}
@@ -323,6 +339,9 @@ function Canvas({ graph, resolved, selection, pinnedNodeId, tool, agent, comment
         minZoom={0.1}
         maxZoom={4}
       >
+        <ViewportPortal>
+          <Frames graph={graph} nodes={nodes} />
+        </ViewportPortal>
         <Background variant={BackgroundVariant.Dots} gap={24} size={1.5} color="var(--color-grid)" />
       </ReactFlow>
       {graph.nodes.length === 0 && !search && (

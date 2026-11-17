@@ -128,6 +128,10 @@ export const TOOL_SPECS: ToolSpec[] = [
       '  { "op": "expose_param", "id": "n8", "param": "gradient", "as"?: "palette", "label"?: "Palette" }   (shows the parameter at graph level; on a function it becomes a parameter of the function\'s node)',
       '  { "op": "unexpose_param", "as": "palette" }',
       '  { "op": "set_presets", "presets": [{ "name": "Green", "values": { "palette": [...] } }] }   (named sets of values for the exposed parameters; replaces the list)',
+      '  { "op": "add_frame", "title": "Flame shape", "nodeIds": ["n2", "n3"], "note"?: "What this group does", "color"?: "blue" }   (a titled box around a group of nodes; colors: gray, blue, green, amber, red, violet)',
+      '  { "op": "remove_frame", "id": "f1" }   (the nodes stay)',
+      '  { "op": "save_gradient", "name": "Toxic fire", "stops": [{ "position": 0, "color": [r, g, b, a], "hardness"?: 1 }] }   (keeps a gradient with the project for the artist to reuse; the same name replaces it)',
+      '  { "op": "remove_gradient", "name": "Toxic fire" }',
       "Give new nodes an id when later operations in the same batch refer to them. Leave position out: new nodes are placed next to what they connect to.",
       'Add "ifVersion": <version from get_node> to an operation on an existing node to fail instead of overwriting a change the artist made since you read it. Locked nodes cannot be changed.'
     ].join("\n"),
@@ -169,6 +173,28 @@ export const TOOL_SPECS: ToolSpec[] = [
       type: "object",
       properties: { graphId, target: { type: "string" }, referenceId: { type: "string", description: "A reference or snapshot id." }, frame: { type: "integer", minimum: 0 }, background: { type: "string" } },
       required: ["referenceId"]
+    },
+    readOnly: true
+  },
+  {
+    name: "list_gradients",
+    description: "The gradients saved with the project and the built-in ones, with their stops. Reuse the project's palette before inventing a new one.",
+    inputSchema: { type: "object", properties: {} },
+    readOnly: true
+  },
+  {
+    name: "sample_gradient",
+    description:
+      "Reads the colors along a line across a reference picture or snapshot and returns them as gradient stops, first color at the start of the line. Use it to take a palette from a reference: draw the line from the darkest tone to the brightest (for fire, from the outer edge to the core).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        referenceId: { type: "string", description: "A reference or snapshot id." },
+        from: { type: "array", items: { type: "number" }, description: "[x, y], 0 to 1 from the top left." },
+        to: { type: "array", items: { type: "number" }, description: "[x, y], 0 to 1 from the top left." },
+        maxStops: { type: "integer", minimum: 2, maximum: 16 }
+      },
+      required: ["referenceId", "from", "to"]
     },
     readOnly: true
   },

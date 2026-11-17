@@ -125,7 +125,16 @@ Status: items 1, 2 and the functions of item 4 are built.
 - Seven recipes ship in `src/library/functions/` and are listed under Recipes in the Library: Cel Fire, Cel Smoke Puff, Slash Arc, Impact Burst, Magic Ring, Lightning Bolt, Dissolve Mask. Using one copies it into the project, where it can be opened and changed. A golden case renders each, and a unit test keeps that case equal to the shipped files.
 - Claude has `list_functions`, `add_function` (copy a recipe), `create_function` (from nodes), `create_graph` with `function`, and `expose_param` / `unexpose_param` / `set_presets` in `apply`.
 
-Not built yet: the 16 in / 16 out limit is not enforced (there is no limit), gradient libraries and sampling a gradient from an image (item 3), example projects beyond the cel fire, and item 5 except auto-align, which exists since Phase 2. Image Sequence, Gradient Dynamic and Multi Blend are still open.
+Built after Phase 8, as one follow-up (items 3 and 5, and two of the nodes):
+
+- **Gradients saved with the project.** In a gradient's editor, **Save to project** keeps it under a name; the Library list shows the project's gradients above the built-in ones. Saving under a name that exists replaces it. Claude has `list_gradients` and the `save_gradient` / `remove_gradient` ops in `apply`.
+- **Gradient from a picture.** **From a picture…** opens a reference; drag a line across it and the colors under the line become the gradient. Flat cel colors become stops with hard edges, a smooth change becomes evenly spaced soft stops. Claude's `sample_gradient` does the same with two points.
+- **Frames.** G, or the Frame tool, puts a titled box around the selected nodes. A frame has no place of its own: it is drawn around its nodes and follows them, and it goes away with its last node. Double-click the title to rename; click it to select what is inside. Claude has `add_frame` / `remove_frame`, and `get_graph` lists frames.
+- **Reroute points.** Double-click an image wire (or click it with the Reroute tool, R) to add a point. It is a node of type `reroute` that passes the image on unchanged.
+- **Multi Blend** stacks up to six layers with one blend mode and an opacity per layer. **Image Sequence** plays a numbered run of image files: the frames are picked together, packed into one sheet (at most 4096 px on a side, scaled down if needed) and stored with the project's images; playback loops, holds or ping-pongs, or is stretched over the graph's frame count.
+- **Hotkeys** for tools, nodes, view and playback can be changed in Settings. Save, undo, copy and paste follow the system and are fixed. They are kept per computer, not in the project.
+
+Not built yet: the 16 in / 16 out limit is not enforced (there is no limit), example projects beyond the cel fire, wire styles, settings profiles (export and import of hotkeys and preferences), Gradient Dynamic, and picking the frames of an Image Sequence through MCP.
 
 ## Phase 8 — AI v2
 

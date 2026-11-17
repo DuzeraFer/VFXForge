@@ -98,6 +98,16 @@ function NodeCardView({ id, data, selected }: NodeProps<CardNode>): ReactElement
   // Sockets sit on the card's edges, spread over the body below the header.
   const spread = (index: number, count: number): string => `${((index + 1) / (count + 1)) * 100}%`
 
+  // A reroute point is a dot on the wire, not a card.
+  if (node.type === "reroute") {
+    return (
+      <div className="reroute-dot" data-selected={selected || undefined} data-testid="reroute-dot" title="Reroute point">
+        <Handle type="target" position={Position.Left} id="in" className="socket" data-type={outputTypes.out ?? "color"} />
+        <Handle type="source" position={Position.Right} id="out" className="socket" data-type={outputTypes.out ?? "color"} />
+      </div>
+    )
+  }
+
   return (
     <div
       className="node-card"

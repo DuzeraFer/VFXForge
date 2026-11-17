@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, safeStorage, shell, type MenuItemConstructorOptions } from "electron"
 import { basename, dirname, extname, isAbsolute, join, resolve } from "node:path"
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { PNG } from "pngjs"
 import type { ExportFormat, ExportImage, ExportResult } from "../src/export/types"
 import { isInside, writeExport, type JpegEncoder } from "./exportFiles"
@@ -167,6 +167,33 @@ ipcMain.handle("asset:import", async (event, projectPath: string | null): Promis
   const result = await dialog.showOpenDialog(win, { properties: ["openFile"], filters: [{ name: "Images", extensions: [...IMAGE_EXTENSIONS] }] })
   if (result.canceled || result.filePaths.length === 0) return null
   return importAsset(assetHome(projectPath), result.filePaths[0])
+})
+
+/**
+ * The frames of an image sequence, picked by the artist: the bytes of each file, in name order.
+ * The window packs them into one sheet and stores that with the project.
+ */
+ipcMain.handle("asset:pickSequence", async (event): Promise<{ name: string; bytes: Uint8Array }[] | null> => {
+  const win = BrowserWindow.fromWebContents(event.sender)!
+  // Tests cannot click through a native dialog: a folder whose pictures are the frames.
+  const preset = process.env.VFXFORGE_TEST_SEQUENCE_DIR
+  const picked = preset
+    ? readdirSync(preset).map((name) => join(preset, name))
+    : (await dialog.showOpenDialog(win, { title: "Choose the frames of the sequence", properties: ["openFile", "multiSelections"], filters: [{ name: "Images", extensions: [...IMAGE_EXTENSIONS] }] })).filePaths
+  const files = picked
+    .filter((file) => (IMAGE_EXTENSIONS as readonly string[]).includes(extname(file).slice(1).toLowerCase()))
+    .sort((a, b) => basename(a).localeCompare(basename(b), undefined, { numeric: true }))
+    .slice(0, 256)
+  if (files.length === 0) return null
+  let total = 0
+  const frames: { name: string; bytes: Uint8Array }[] = []
+  for (const file of files) {
+    const size = statSync(file).size
+    total += size
+    if (size > 32 * 1024 * 1024 || total > 512 * 1024 * 1024) throw new Error("Those frames are too large to load together (32 MB per file, 512 MB in all).")
+    frames.push({ name: basename(file), bytes: readFileSync(file) })
+  }
+  return frames
 })
 
 /** A picture the window made (a snapshot of an output): stored as a PNG like any other image of the project. */
