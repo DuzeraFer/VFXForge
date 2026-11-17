@@ -4,15 +4,19 @@
  * the same ops the UI uses.
  */
 
+import { planFunctionFromNodes } from "../app/functions"
 import { session } from "../app/session"
-import { applyOps, BatchError, nextId, type Graph, type Op, type ParamValue } from "../doc"
+import { applyOps, BatchError, importFunctionOps, nextId, type Graph, type Op, type ParamValue, type Preset } from "../doc"
+import { functionType, usesGraph } from "../engine/functions"
+import { recipe, recipes } from "../library/recipes"
 import type { Engine } from "../engine/evaluator"
 import { toRgba8 } from "../engine/evaluator"
 import { measureFrame, measureMotion } from "../engine/measure"
 import { compositeOver, defaultResultName, isResultNode, resolveTarget, sheetLayout, type Rgba8Image, type Target } from "../engine/render"
 import { resolveGraph, type Problem } from "../engine/validate"
-import { nodeDefs, registry } from "../nodes"
-import { graphText } from "./graphText"
+import type { ResolvedNodeDef } from "../engine/nodeDef"
+import { registry } from "../nodes"
+import { formatValue, graphText } from "./graphText"
 import { generateFor } from "../ai/generation"
 import { cleanSettings, exportFromApp, loadExportSettings } from "../export/run"
 import { GUIDE } from "./guide"
@@ -128,7 +132,7 @@ const picture = (image: Rgba8Image): ToolContent => ({
 
 // ── Editing ───────────────────────────────────────────────
 
-const PROBLEMS_THAT_BLOCK: ReadonlySet<Problem["code"]> = new Set(["unknown_type", "unknown_param", "bad_param", "unknown_socket", "type_mismatch", "bad_driver"])
+const PROBLEMS_THAT_BLOCK: ReadonlySet<Problem["code"]> = new Set(["unknown_type", "unknown_param", "bad_param", "unknown_socket", "type_mismatch", "bad_driver", "bad_function"])
 
 /** Agent-facing ops to document ops, and the nodes they touch. */
 function translate(graph: Graph, raw: unknown[], projectSeed: number): { ops: Op[]; touched: string[]; added: { id: string; placed: boolean }[] } {
@@ -150,6 +154,7 @@ function translate(graph: Graph, raw: unknown[], projectSeed: number): { ops: Op
       case "add_node": {
         const type = need("type")
         if (!registry.get(type)) throw new ToolError(`${where}: there is no node type "${type}". Call list_node_types.`)
+        if (usesGraph(registry.get(type)!, graph.id, registry)) throw new ToolError(`${where}: ${type} cannot be used in graph ${graph.id}, because that function would then contain itself.`)
         const id = typeof op.id === "string" ? op.id : nextId(taken, "n")
         taken.push(id)
         const position = Array.isArray(op.position) ? (op.position as [number, number]) : undefined
@@ -209,13 +214,42 @@ function translate(graph: Graph, raw: unknown[], projectSeed: number): { ops: Op
         const settings: Record<string, unknown> = {}
         for (const key of ["width", "height", "frames", "fps", "loop"]) if (op[key] !== undefined) settings[key] = op[key]
         if (Array.isArray(op.size)) [settings.width, settings.height] = op.size as number[]
-        if (typeof op.name === "string" || Object.keys(settings).length > 0) {
-          ops.push({ op: "set_graph", graphId: graph.id, ...(typeof op.name === "string" ? { name: op.name } : {}), ...(Object.keys(settings).length > 0 ? { settings } : {}) })
+        const extra = {
+          ...(typeof op.function === "boolean" ? { function: op.function } : {}),
+          ...(typeof op.description === "string" || op.description === null ? { description: op.description ? op.description : null } : {})
+        }
+        if (typeof op.name === "string" || Object.keys(settings).length > 0 || Object.keys(extra).length > 0) {
+          ops.push({ op: "set_graph", graphId: graph.id, ...(typeof op.name === "string" ? { name: op.name } : {}), ...(Object.keys(settings).length > 0 ? { settings } : {}), ...extra })
         }
         if (typeof op.seed === "number" && op.seed !== projectSeed) ops.push({ op: "set_project", seed: op.seed })
         break
       }
-      case "expose_param":
+      case "expose_param": {
+        const id = need("id")
+        const param = need("param")
+        const node = graph.nodes.find((n) => n.id === id) ?? null
+        // A node added earlier in this batch is not in the graph yet; the dry run checks those.
+        const def = node && registry.get(node.type)
+        if (def && !(param in def.params)) throw new ToolError(`${where}: ${node.type} has no parameter "${param}". It has: ${Object.keys(def.params).join(", ") || "none"}.`)
+        ops.push({
+          op: "expose_param",
+          graphId: graph.id,
+          id,
+          param,
+          ...(typeof op.as === "string" ? { as: op.as } : {}),
+          ...(typeof op.label === "string" ? { label: op.label } : {})
+        })
+        touched.add(id)
+        break
+      }
+      case "unexpose_param":
+        ops.push({ op: "unexpose_param", graphId: graph.id, as: need("as") })
+        break
+      case "set_presets": {
+        if (!Array.isArray(op.presets)) throw new ToolError(`${where} (set_presets) needs "presets": a list of { name, values }.`)
+        ops.push({ op: "set_presets", graphId: graph.id, presets: op.presets as Preset[] })
+        break
+      }
       case "add_comment_box":
         throw new ToolError(`${where}: "${String(op.op)}" is not available yet.`)
       default:
@@ -264,6 +298,32 @@ function apply(agent: AgentIdentity, args: Args): ToolResult {
 
 // ── Reading ───────────────────────────────────────────────
 
+function describeFunction(def: ResolvedNodeDef): string {
+  const lines = [`inputs: ${Object.entries(def.inputs).map(([n, i]) => `${n}: ${i.type}`).join(", ") || "none"}`, `outputs: ${Object.entries(def.outputs).map(([n, t]) => `${n}: ${t}`).join(", ")}`]
+  const params = Object.entries(def.params).map(([name, schema]) => `${name} (${schema.type}${schema.type === "gradient" ? "" : `, default ${formatValue(schema.default as ParamValue)}`})`)
+  lines.push(`params: ${params.join(", ") || "none"}`)
+  const presets = def.fn?.graph.presets?.map((p) => p.name) ?? []
+  if (presets.length > 0) lines.push(`presets: ${presets.join(", ")}`)
+  return lines.join("\n")
+}
+
+function listFunctions(): ToolResult {
+  const { project } = session.getState()
+  const parts: string[] = []
+  const mine = project.graphs.filter((g) => g.function)
+  parts.push(mine.length > 0 ? "In this project (use the type with add_node; get_graph shows what is inside):" : "This project has no functions yet.")
+  for (const graph of mine) {
+    const def = registry.get(functionType(graph.id))
+    parts.push(`\n${functionType(graph.id)}  "${graph.name}"${graph.description ? `  ${graph.description}` : ""}\n${def ? describeFunction(def) : "Not usable as a node yet: it has no output node."}`)
+  }
+  const shipped = recipes.filter((r) => !mine.some((g) => g.id === r.id))
+  if (shipped.length > 0) {
+    parts.push("\nRecipes that ship with VFXForge (call add_function with the recipe id to copy one into the project):")
+    for (const r of shipped) parts.push(`${r.id}  "${r.name}"  ${r.description}`)
+  }
+  return text(parts.join("\n"))
+}
+
 function basicInfo(): ToolResult {
   const state = session.getState()
   return json({
@@ -275,6 +335,7 @@ function basicInfo(): ToolResult {
     graphs: state.project.graphs.map((g) => ({
       id: g.id,
       name: g.name,
+      ...(g.function ? { function: true, nodeType: functionType(g.id) } : {}),
       size: `${g.settings.width}x${g.settings.height}`,
       frames: g.settings.frames,
       fps: g.settings.fps,
@@ -282,7 +343,7 @@ function basicInfo(): ToolResult {
       nodes: g.nodes.length,
       outputs: g.nodes.filter((n) => isResultNode(n.type)).map((n) => ({ nodeId: n.id, name: n.params.name ?? defaultResultName(n.type), ...(n.type === "sheet_output" ? { sheet: true } : {}), ...(n.type === "packed_output" ? { packed: true } : {}) }))
     })),
-    nodeTypes: nodeDefs.length
+    nodeTypes: registry.list().length
   })
 }
 
@@ -329,8 +390,9 @@ function nodeInfo(args: Args): ToolResult {
 
 function nodeTypes(args: Args): ToolResult {
   const query = typeof args.query === "string" ? args.query.trim().toLowerCase() : ""
-  const sockets = (def: (typeof nodeDefs)[number]): string =>
+  const sockets = (def: ResolvedNodeDef): string =>
     `(${Object.entries(def.inputs).map(([n, i]) => `${n}: ${i.type}${i.optional ? "?" : ""}`).join(", ")}) -> (${Object.entries(def.outputs).map(([n, t]) => `${n}: ${t}`).join(", ")})`
+  const nodeDefs = registry.list()
   if (!query) {
     const lines = [...nodeDefs]
       .sort((a, b) => a.category.localeCompare(b.category) || a.type.localeCompare(b.type))
@@ -480,9 +542,44 @@ export async function runTool(agent: AgentIdentity, name: string, args: Args): P
         const settings: Record<string, number> = {}
         for (const key of ["width", "height", "frames", "fps"]) if (typeof args[key] === "number") settings[key] = args[key]
         const name = typeof args.name === "string" && args.name.trim() ? args.name.trim() : `Graph ${project.graphs.length + 1}`
-        session.agentApply(agent, id, [{ op: "add_graph", id, name, settings }], `Create graph "${name}"`, [])
+        const asFunction = args.function === true
+        const description = typeof args.description === "string" && args.description.trim() ? args.description.trim() : undefined
+        session.agentApply(agent, id, [{ op: "add_graph", id, name, settings, ...(asFunction ? { function: true } : {}), ...(description ? { description } : {}) }], `Create ${asFunction ? "function" : "graph"} "${name}"`, [])
         if (args.open === true) session.setActiveGraph(id)
-        return text(`Created graph ${id} "${name}".${args.open === true ? " It is now open in the editor." : ""}`)
+        return text(
+          `Created ${asFunction ? "function" : "graph"} ${id} "${name}".${args.open === true ? " It is now open in the editor." : ""}${
+            asFunction ? ` Once it has an output node, other graphs can use it as node type ${functionType(id)}.` : ""
+          }`
+        )
+      }
+      case "list_functions":
+        return listFunctions()
+      case "create_function": {
+        const graph = graphOf(args)
+        const ids = Array.isArray(args.nodeIds) ? (args.nodeIds as unknown[]).map(String) : []
+        const missing = ids.filter((id) => !graph.nodes.some((n) => n.id === id))
+        if (missing.length > 0) throw new ToolError(`Graph ${graph.id} has no node ${missing.join(", ")}.`)
+        const locked = ids.filter((id) => graph.nodes.find((n) => n.id === id)?.locked)
+        if (locked.length > 0) throw new ToolError(`${locked.join(", ")} ${locked.length === 1 ? "is" : "are"} locked by the artist, so they cannot be moved into a function.`)
+        const plan = planFunctionFromNodes(session.getState().project.graphs, graph, ids, typeof args.name === "string" ? args.name : undefined)
+        if ("error" in plan) throw new ToolError(plan.error)
+        try {
+          session.agentApply(agent, graph.id, plan.ops, `Make a function from ${ids.length} node${ids.length === 1 ? "" : "s"}`, [plan.nodeId])
+        } catch (error) {
+          if (error instanceof BatchError) throw new ToolError(`Nothing was changed. ${error.message}`)
+          throw error
+        }
+        const def = registry.get(functionType(plan.functionId))
+        return text(`Moved ${ids.join(", ")} into function ${plan.functionId}; node ${plan.nodeId} (${functionType(plan.functionId)}) stands in their place.${def ? `\n${describeFunction(def)}` : ""}`)
+      }
+      case "add_function": {
+        const found = recipe(typeof args.recipe === "string" ? args.recipe : "")
+        if (!found) throw new ToolError(`There is no recipe "${String(args.recipe)}". Recipes: ${recipes.map((r) => r.id).join(", ")}.`)
+        const { project } = session.getState()
+        const { ops, mainId } = importFunctionOps(project, found.graphs)
+        if (ops.length > 0) session.agentApply(agent, session.getState().activeGraphId ?? mainId, ops, `Add the ${found.name} function`, [])
+        const def = registry.get(functionType(mainId))
+        return text(`${ops.length > 0 ? "Copied" : "The project already has"} ${found.name}. Add it with { "op": "add_node", "type": "${functionType(mainId)}" }.${def ? `\n${describeFunction(def)}` : ""}`)
       }
       case "export": {
         const last = loadExportSettings()

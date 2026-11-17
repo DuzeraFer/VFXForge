@@ -1,0 +1,215 @@
+{
+ "version": 1,
+ "name": "Cel Smoke Puff",
+ "seed": 7,
+ "graphs": [
+  {
+   "id": "cel_smoke_puff",
+   "name": "Cel Smoke Puff",
+   "function": true,
+   "description": "A cartoon smoke puff: a lumpy blob in two flat tones with a lit rim.",
+   "settings": {
+    "width": 256,
+    "height": 256,
+    "frames": 16,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "t",
+     "type": "time",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "noise",
+     "type": "perlin",
+     "position": [
+      200,
+      0
+     ],
+     "name": "Lump noise",
+     "params": {
+      "scale": 3.5,
+      "octaves": 2
+     },
+     "driven": {
+      "evolution": "t.phase"
+     }
+    },
+    {
+     "id": "blob",
+     "type": "shape",
+     "position": [
+      200,
+      160
+     ],
+     "params": {
+      "size": [
+       0.52,
+       0.52
+      ],
+      "softness": 0.25
+     }
+    },
+    {
+     "id": "warp",
+     "type": "warp",
+     "position": [
+      400,
+      160
+     ],
+     "params": {
+      "intensity": 0.35,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "rim",
+     "type": "rim_shade",
+     "position": [
+      600,
+      160
+     ],
+     "params": {
+      "width": 0.1,
+      "angle": 135,
+      "tiling": "clamp"
+     }
+    },
+    {
+     "id": "palette",
+     "type": "palette_remap",
+     "position": [
+      800,
+      160
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0.3,
+         0.3,
+         0.36,
+         0
+        ]
+       },
+       {
+        "position": 0.25,
+        "color": [
+         0.42,
+         0.42,
+         0.5,
+         1
+        ],
+        "hardness": 1
+       },
+       {
+        "position": 0.75,
+        "color": [
+         0.86,
+         0.86,
+         0.9,
+         1
+        ],
+        "hardness": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "out",
+     "type": "output",
+     "position": [
+      1000,
+      160
+     ],
+     "params": {
+      "name": "color"
+     }
+    },
+    {
+     "id": "out_tones",
+     "type": "output",
+     "position": [
+      1000,
+      320
+     ],
+     "params": {
+      "name": "tones"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "blob.out",
+     "to": "warp.in"
+    },
+    {
+     "from": "noise.out",
+     "to": "warp.map"
+    },
+    {
+     "from": "warp.out",
+     "to": "rim.in"
+    },
+    {
+     "from": "rim.out",
+     "to": "palette.in"
+    },
+    {
+     "from": "palette.out",
+     "to": "out.in"
+    },
+    {
+     "from": "rim.out",
+     "to": "out_tones.in"
+    }
+   ],
+   "frames": [],
+   "exposed": [
+    {
+     "nodeId": "palette",
+     "param": "gradient",
+     "as": "palette",
+     "label": "Palette"
+    },
+    {
+     "nodeId": "blob",
+     "param": "size",
+     "as": "size",
+     "label": "Size"
+    },
+    {
+     "nodeId": "warp",
+     "param": "intensity",
+     "as": "lumps",
+     "label": "Lumps"
+    },
+    {
+     "nodeId": "noise",
+     "param": "scale",
+     "as": "lump_size",
+     "label": "Lump scale"
+    },
+    {
+     "nodeId": "rim",
+     "param": "angle",
+     "as": "light",
+     "label": "Light from"
+    },
+    {
+     "nodeId": "rim",
+     "param": "width",
+     "as": "rim",
+     "label": "Rim width"
+    }
+   ]
+  }
+ ]
+}

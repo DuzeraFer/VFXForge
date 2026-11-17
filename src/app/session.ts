@@ -4,6 +4,7 @@
  */
 
 import { useSyncExternalStore } from "react"
+import { setProjectFunctions } from "../nodes"
 import {
   BatchError,
   createDocumentStore,
@@ -70,7 +71,7 @@ function fileName(path: string): string {
 }
 
 export class Session {
-  readonly store: DocumentStore = createDocumentStore({ ...createProject(), graphs: [createGraph("g1", "Graph 1")] })
+  readonly store: DocumentStore = createDocumentStore({ ...createProject(), graphs: [createGraph("g1", "Graph 1")] }, undefined, (project) => setProjectFunctions(project.graphs))
   private path: string | null = null
   /** The project as last saved or loaded. Dirty = the current project is a different object. */
   private saved: Project = this.store.getState().project

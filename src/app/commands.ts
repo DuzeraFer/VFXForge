@@ -2,10 +2,14 @@
 
 import { autoLayoutOps, nextId, parseSocketRef, type Graph, type Node, type Op } from "../doc"
 import type { DataType, InputType, ResolvedNodeDef } from "../engine/nodeDef"
+import { functionIdOf } from "../engine/functions"
 import { registry } from "../nodes"
 import { session } from "./session"
 
 export function prettyName(type: string): string {
+  // A function's node carries the name of its graph.
+  const fn = functionIdOf(type) !== null ? registry.get(type)?.fn : undefined
+  if (fn) return fn.graph.name
   return type
     .split("_")
     .map((word) => (word === "2d" ? "2D" : word === "ai" ? "AI" : word.charAt(0).toUpperCase() + word.slice(1)))
@@ -33,7 +37,7 @@ export function matchingSocket(def: ResolvedNodeDef, wire: PendingWire): string 
     return null
   }
   for (const [name, type] of Object.entries(def.outputs)) {
-    const produces: DataType | "image" = type.startsWith("same:") ? "image" : (type as DataType)
+    const produces: DataType | "image" = /^(same|param):/.test(type) ? "image" : (type as DataType)
     if (wire.type === "value" ? produces === "value" : produces !== "value") return name
   }
   return null

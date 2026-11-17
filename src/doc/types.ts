@@ -35,14 +35,22 @@ export type CommentBox = { id: string; title: string; nodeIds: string[]; color?:
 
 export type ExposedParam = { nodeId: string; param: string; as: string; label?: string; group?: string }
 
+/** Named values for a graph's exposed parameters, keyed by the exposed name (`as`). */
+export type Preset = { name: string; values: Record<string, ParamValue> }
+
 export type Graph = {
   id: string
   name: string
+  /** A function: other graphs of the project can use it as a node, and it is left out of export. */
+  function?: boolean
+  /** What the graph makes, in a sentence. Shown as the doc of the function's node. */
+  description?: string
   settings: GraphSettings
   nodes: Node[]
   links: Link[]
   frames: CommentBox[]
   exposed: ExposedParam[]
+  presets?: Preset[]
 }
 
 export type GradientStop = { position: number; color: [number, number, number, number]; hardness?: number }

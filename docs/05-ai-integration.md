@@ -59,7 +59,9 @@ Kept small on purpose: one write tool that takes a list of operations is easier 
 |---|---|
 | `apply(ops[], label)` | Applies a list of operations as **one atomic, undoable transaction** named `label`. Returns new ids, validation errors, and optionally a thumbnail of the affected outputs |
 | `create_graph(name, settings)` | New graph in the project |
-| `create_function(fromNodeIds, name)` | Collapse a selection into a reusable function |
+| `create_function(nodeIds, name)` | Collapse nodes into a reusable function, with one node in their place |
+| `list_functions` | The functions in the project (node type, sockets, parameters, presets) and the shipped recipes |
+| `add_function(recipe)` | Copies a shipped recipe into the project |
 | `set_selection(nodeIds)` / `focus(nodeId)` | Ask the UI to show something. Never moves the human's viewport without consent; shows a "Claude wants to show you…" pill instead |
 | `add_reference(path or url, note)` | Puts an image on the reference board |
 | `comment(target, text)` / `reply(threadId, text)` | Talk to the artist inside the document |

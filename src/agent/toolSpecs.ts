@@ -124,7 +124,10 @@ export const TOOL_SPECS: ToolSpec[] = [
       '  { "op": "move_node", "id": "n12", "position": [x, y] }',
       '  { "op": "rename", "id": "n12", "name": "Warp noise" }   (name: null restores the type name)',
       '  { "op": "set_node_flags", "id": "n12", "bypass": true }',
-      '  { "op": "set_graph", "name"?: "Fire", "width"?: 256, "height"?: 256, "frames"?: 16, "fps"?: 12, "loop"?: true, "seed"?: 7 }',
+      '  { "op": "set_graph", "name"?: "Fire", "width"?: 256, "height"?: 256, "frames"?: 16, "fps"?: 12, "loop"?: true, "seed"?: 7, "function"?: true, "description"?: "What the function makes" }',
+      '  { "op": "expose_param", "id": "n8", "param": "gradient", "as"?: "palette", "label"?: "Palette" }   (shows the parameter at graph level; on a function it becomes a parameter of the function\'s node)',
+      '  { "op": "unexpose_param", "as": "palette" }',
+      '  { "op": "set_presets", "presets": [{ "name": "Green", "values": { "palette": [...] } }] }   (named sets of values for the exposed parameters; replaces the list)',
       "Give new nodes an id when later operations in the same batch refer to them. Leave position out: new nodes are placed next to what they connect to.",
       'Add "ifVersion": <version from get_node> to an operation on an existing node to fail instead of overwriting a change the artist made since you read it. Locked nodes cannot be changed.'
     ].join("\n"),
@@ -147,8 +150,33 @@ export const TOOL_SPECS: ToolSpec[] = [
     readOnly: false
   },
   {
+    name: "list_functions",
+    description:
+      "Functions: graphs used as one node. Lists the ones in this project (node type, inputs, outputs, parameters, presets) and the recipes that ship with VFXForge (cel fire, smoke puff, slash, impact burst, magic ring, lightning, dissolve mask). Look here before building a common effect from scratch.",
+    inputSchema: { type: "object", properties: {} },
+    readOnly: true
+  },
+  {
+    name: "add_function",
+    description: "Copies a shipped recipe into the project as a function and returns its node type, sockets and parameters. After that, add it to a graph with apply (add_node). The artist can open the copy and change what is inside.",
+    inputSchema: { type: "object", properties: { recipe: { type: "string", description: "A recipe id from list_functions, e.g. cel_fire." } }, required: ["recipe"] },
+    readOnly: false
+  },
+  {
+    name: "create_function",
+    description:
+      "Moves nodes of a graph into a new function and puts one node in their place, wired as they were. Wires that crossed the group become the function's inputs and outputs. One undoable step. Use it to tidy a finished part of a graph, or to reuse it in other graphs.",
+    inputSchema: {
+      type: "object",
+      properties: { graphId, nodeIds: { type: "array", items: { type: "string" }, minItems: 1 }, name: { type: "string", description: "The function's name, e.g. \"Cel bands\"." } },
+      required: ["nodeIds"]
+    },
+    readOnly: false
+  },
+  {
     name: "create_graph",
-    description: "Adds a new, empty graph to the project and returns its id. Does not switch the artist's view unless open is true.",
+    description:
+      "Adds a new, empty graph to the project and returns its id. Does not switch the artist's view unless open is true. With function: true the graph is a function: other graphs use it as a node of type fn_<id>, with its graph_input nodes as inputs, its output nodes as outputs and its exposed parameters as parameters.",
     inputSchema: {
       type: "object",
       properties: {
@@ -157,6 +185,8 @@ export const TOOL_SPECS: ToolSpec[] = [
         height: { type: "integer", minimum: 1, maximum: 4096 },
         frames: { type: "integer", minimum: 1 },
         fps: { type: "integer", minimum: 1 },
+        function: { type: "boolean", description: "Make it a function that other graphs use as a node." },
+        description: { type: "string", description: "For a function: what it makes, in a sentence." },
         open: { type: "boolean", description: "Show the new graph in the editor." }
       },
       required: ["name"]

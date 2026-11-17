@@ -135,6 +135,28 @@ ipcMain.handle("project:saveAs", async (event, text: string, suggestedName: stri
   return result.filePath
 })
 
+const FUNCTION_FILTERS = [{ name: "VFXForge function", extensions: ["vfxfn"] }]
+
+ipcMain.handle("function:save", async (event, text: string, suggestedName: string): Promise<string | null> => {
+  const win = BrowserWindow.fromWebContents(event.sender)!
+  const preset = process.env.VFXFORGE_TEST_FUNCTION_FILE
+  const safe = String(suggestedName).replace(/[\\/:*?"<>|]+/g, "_").slice(0, 80) || "function"
+  const result = preset ? { canceled: false, filePath: preset } : await dialog.showSaveDialog(win, { defaultPath: `${safe}.vfxfn`, filters: FUNCTION_FILTERS })
+  if (result.canceled || !result.filePath) return null
+  writeFileSync(result.filePath, String(text), "utf8")
+  return result.filePath
+})
+
+ipcMain.handle("function:open", async (event): Promise<string | null> => {
+  const win = BrowserWindow.fromWebContents(event.sender)!
+  const preset = process.env.VFXFORGE_TEST_FUNCTION_FILE
+  const result = preset ? { canceled: false, filePaths: [preset] } : await dialog.showOpenDialog(win, { properties: ["openFile"], filters: FUNCTION_FILTERS })
+  if (result.canceled || result.filePaths.length === 0) return null
+  const text = readFileSync(result.filePaths[0], "utf8")
+  // The window checks the content; this only keeps a wrong pick from flooding it.
+  return text.length > 8_000_000 ? null : text
+})
+
 ipcMain.handle("asset:read", (_event, projectPath: string | null, ref: string): Uint8Array | null => {
   return readAsset(assetDirs(projectPath), ref)
 })

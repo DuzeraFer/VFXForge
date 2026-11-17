@@ -1,9 +1,10 @@
 import { useState, type ReactElement, type ReactNode } from "react"
 import { nodeTitle, prettyName, toggleBypass } from "../app/commands"
+import { exportFunction, makeFunctionFromSelection } from "../app/functions"
 import { Icon } from "../app/components/Icon"
 import { session } from "../app/session"
-import type { GradientStop, Graph, Node, ParamValue, Project } from "../doc"
-import type { ParamSchema, ResolvedNodeDef } from "../engine/nodeDef"
+import type { GradientStop, Graph, Node, ParamValue, Preset, Project } from "../doc"
+import { checkParam, type ParamSchema, type ResolvedNodeDef } from "../engine/nodeDef"
 import type { Problem } from "../engine/validate"
 import { registry } from "../nodes"
 import { generateFor, generationKey, useGeneration } from "../ai/generation"
@@ -48,8 +49,8 @@ function sliderRange(schema: Extract<ParamSchema, { type: "float" | "int" }>): [
   return low !== undefined && high !== undefined && high > low ? [low, high] : null
 }
 
-function ParamControl({ graph, node, name, schema }: { graph: Graph; node: Node; name: string; schema: ParamSchema }): ReactElement {
-  const label = prettyName(name)
+function ParamControl({ graph, node, name, schema, as }: { graph: Graph; node: Node; name: string; schema: ParamSchema; as?: string }): ReactElement {
+  const label = as ?? prettyName(name)
   const value = (name in node.params ? node.params[name] : schema.default) as ParamValue
   const set = (next: ParamValue, gesture?: string): void => {
     // The document stores only what differs from the defaults.
@@ -209,6 +210,39 @@ function ParamControl({ graph, node, name, schema }: { graph: Graph; node: Node;
   }
 }
 
+/** A parameter row with a pin that shows the parameter at graph level (and, on a function, on the function's node). */
+function Exposable({ graph, node, name, schema }: { graph: Graph; node: Node; name: string; schema: ParamSchema }): ReactElement {
+  const entry = graph.exposed.find((e) => e.nodeId === node.id && e.param === name)
+  const toggle = (): void => {
+    if (entry) {
+      session.apply([{ op: "unexpose_param", graphId: graph.id, as: entry.as }], `Hide ${prettyName(name)} from the graph`)
+      return
+    }
+    // Two nodes can have a parameter of the same name; the second gets the node's id in front.
+    const taken = new Set(graph.exposed.map((e) => e.as))
+    let as = name
+    if (taken.has(as)) as = `${node.id.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_${name}`.replace(/^[^a-z]+/, "p_")
+    for (let i = 2; taken.has(as); i++) as = `${name}_${i}`
+    session.apply([{ op: "expose_param", graphId: graph.id, id: node.id, param: name, as }], `Show ${prettyName(name)} on the graph`)
+  }
+  return (
+    <div className="param-exposable">
+      <ParamControl graph={graph} node={node} name={name} schema={schema} />
+      <button
+        className="expose-button"
+        data-on={entry ? true : undefined}
+        title={entry ? `Shown on the graph as "${entry.as}". Click to hide it.` : "Show this parameter on the graph. On a function it becomes a parameter of the function's node."}
+        aria-label={`${entry ? "Hide" : "Show"} ${prettyName(name)} on the graph`}
+        aria-pressed={!!entry}
+        data-testid={`expose-${name}`}
+        onClick={toggle}
+      >
+        <Icon name="pin" size={12} />
+      </button>
+    </div>
+  )
+}
+
 const COMMON = new Set(["seed", "tiling"])
 
 /** Image Sample: the file is chosen with a dialog and copied into the project. */
@@ -323,9 +357,16 @@ function NodeInspector({ graph, node, def, problems }: { graph: Graph; node: Nod
       {own.length > 0 && (
         <Group title="Parameters">
           {own.map(([name, schema]) => (
-            <ParamControl key={name} graph={graph} node={node} name={name} schema={schema} />
+            <Exposable key={name} graph={graph} node={node} name={name} schema={schema} />
           ))}
         </Group>
+      )}
+      {def.fn && (
+        <div className="param-row">
+          <button className="chip chip-button" data-testid="open-function" onClick={() => session.setActiveGraph(def.fn!.graph.id)}>
+            Open the function
+          </button>
+        </div>
       )}
       <Group title="Node">
         {common.map(([name, schema]) => (
@@ -339,6 +380,102 @@ function NodeInspector({ graph, node, def, problems }: { graph: Graph; node: Nod
         </div>
       </Group>
     </>
+  )
+}
+
+/** The graph's pinned parameters, editable in one place, and presets of their values. */
+function ExposedGroup({ graph }: { graph: Graph }): ReactElement | null {
+  const [name, setName] = useState("")
+  const rows = graph.exposed
+    .map((entry) => {
+      const node = graph.nodes.find((n) => n.id === entry.nodeId)
+      const schema = node && registry.get(node.type)?.params[entry.param]
+      return node && schema ? { entry, node, schema } : null
+    })
+    .filter((row) => row !== null)
+  const presets = graph.presets ?? []
+  if (rows.length === 0 && presets.length === 0) return null
+
+  const current = (): Record<string, ParamValue> => Object.fromEntries(rows.map(({ entry, node, schema }) => [entry.as, (node.params[entry.param] ?? schema.default) as ParamValue]))
+  const matches = (values: Record<string, ParamValue>): boolean => {
+    const now = current()
+    return Object.entries(values).every(([as, value]) => as in now && sameValue(now[as], value))
+  }
+  const applyPreset = (preset: Preset): void => {
+    const byNode = new Map<string, Record<string, ParamValue | null>>()
+    for (const { entry, schema } of rows) {
+      if (!(entry.as in preset.values)) continue
+      const value = preset.values[entry.as]
+      if (checkParam(schema, value)) continue
+      byNode.set(entry.nodeId, { ...byNode.get(entry.nodeId), [entry.param]: sameValue(value, schema.default) ? null : value })
+    }
+    session.apply(
+      [...byNode].map(([id, params]) => ({ op: "set_params" as const, graphId: graph.id, id, params })),
+      `Preset ${preset.name}`
+    )
+  }
+  const save = (): void => {
+    const title = name.trim()
+    if (!title) return
+    session.apply([{ op: "set_presets", graphId: graph.id, presets: [...presets.filter((p) => p.name !== title), { name: title, values: current() }] }], `Save preset ${title}`)
+    setName("")
+  }
+
+  return (
+    <Group title="Parameters">
+      {rows.map(({ entry, node, schema }) => (
+        <div className="param-exposable" key={entry.as}>
+          <ParamControl graph={graph} node={node} name={entry.param} schema={schema} as={entry.label ?? prettyName(entry.as)} />
+          <button
+            className="expose-button"
+            data-on
+            title={`${node.name ?? prettyName(node.type)} · ${entry.param}. Click to take it off the graph.`}
+            aria-label={`Hide ${entry.as} from the graph`}
+            onClick={() => session.apply([{ op: "unexpose_param", graphId: graph.id, as: entry.as }], `Hide ${prettyName(entry.as)} from the graph`)}
+          >
+            <Icon name="pin" size={12} />
+          </button>
+        </div>
+      ))}
+      {rows.length > 0 && (
+        <>
+          <div className="preset-list" data-testid="presets">
+            {presets.map((preset) => (
+              <span className="preset" key={preset.name} data-on={matches(preset.values) || undefined}>
+                <button className="preset-name" title="Use these values" onClick={() => applyPreset(preset)}>
+                  {preset.name}
+                </button>
+                <button
+                  className="preset-remove"
+                  aria-label={`Delete preset ${preset.name}`}
+                  title="Delete this preset"
+                  onClick={() => session.apply([{ op: "set_presets", graphId: graph.id, presets: presets.filter((p) => p !== preset) }], `Delete preset ${preset.name}`)}
+                >
+                  <Icon name="close" size={9} />
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="param-row">
+            <span className="field field-grow">
+              <input
+                className="field-input"
+                type="text"
+                value={name}
+                aria-label="Preset name"
+                placeholder="Name these values"
+                data-testid="preset-name"
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && save()}
+              />
+            </span>
+            <button className="chip chip-button" disabled={name.trim() === ""} data-testid="preset-save" onClick={save}>
+              Save preset
+            </button>
+          </div>
+        </>
+      )}
+    </Group>
   )
 }
 
@@ -377,6 +514,33 @@ function GraphInspector({ project, graph }: { project: Project; graph: Graph }):
           <NumberField className="field-narrow" value={s.fps} integer min={1} max={240} label="Frames per second value" onChange={(v, g) => setting("fps", v, g)} />
         </Row>
       </Group>
+      <ExposedGroup graph={graph} />
+      <Group title="Function">
+        <div className="param-row" title="A function can be used as a node in the other graphs of this project. It is left out of export.">
+          <span className="param-label param-label-wide">Use as a node</span>
+          <span className="toolbar-spacer" />
+          <Toggle value={!!graph.function} label="Use as a node" onChange={() => session.apply([{ op: "set_graph", graphId: graph.id, function: !graph.function }], graph.function ? "Stop using as a function" : "Make it a function")} />
+        </div>
+        {graph.function && (
+          <>
+            <Row label="About" stacked title="Shown as the help text of the function's node, and to Claude.">
+              <TextArea
+                value={graph.description ?? ""}
+                label="Function description"
+                rows={3}
+                placeholder="What it makes, in a sentence"
+                onChange={(text) => session.apply([{ op: "set_graph", graphId: graph.id, description: text.trim() === "" ? null : text.trim() }], "Describe function")}
+              />
+            </Row>
+            <p className="inspector-doc">Graph Input nodes become its input sockets, Output nodes its outputs, and pinned parameters its parameters.</p>
+            <div className="param-row">
+              <button className="chip chip-button" data-testid="export-function" onClick={() => void exportFunction(graph.id)}>
+                Save as a file…
+              </button>
+            </div>
+          </>
+        )}
+      </Group>
       <Group title="Project">
         <Row label="Seed" title="Every seeded node adds its own offset to this.">
           <NumberField className="field-grow" value={project.seed} integer label="Project seed" onChange={(seed, g) => session.apply([{ op: "set_project", seed }], "Set project seed", `project.seed.${g}`)} />
@@ -406,6 +570,11 @@ export function Inspector({ project, graph, selection, problems }: Props): React
           <span className="inspector-name">{nodes.length} nodes selected</span>
         </header>
         <p className="inspector-doc">Ctrl+D duplicates them, L lines them up, B bypasses them, Delete removes them.</p>
+        <div className="param-row">
+          <button className="chip chip-button" data-testid="make-function" title="Moves these nodes into a new function and puts one node in their place" onClick={makeFunctionFromSelection}>
+            Make a function
+          </button>
+        </div>
       </>
     )
   } else {

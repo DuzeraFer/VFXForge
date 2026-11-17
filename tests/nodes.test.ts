@@ -6,7 +6,7 @@ import { evaluateExpression, ExpressionError } from "../src/engine/expression"
 import { codeProblem, buildLayout, buildShader, hashText } from "../src/engine/shader"
 import { resolveGraph } from "../src/engine/validate"
 import { exportTargets } from "../src/export/render"
-import { nodeDefs, registry } from "../src/nodes"
+import { nodeDefs, registry, setProjectFunctions } from "../src/nodes"
 import { parseProject } from "../src/doc/serialize"
 
 const CASES = join(__dirname, "golden", "cases")
@@ -22,6 +22,7 @@ describe("node library", () => {
 
   it("golden cases have no problems", () => {
     for (const project of cases) {
+      setProjectFunctions(project.graphs)
       for (const graph of project.graphs) {
         expect(resolveGraph(graph, registry).problems, `${project.name}/${graph.name}`).toEqual([])
       }
