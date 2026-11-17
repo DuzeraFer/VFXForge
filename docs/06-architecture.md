@@ -117,6 +117,7 @@ export default defineNode({
 ## 6.7 Export
 
 - Output nodes declare name, usage, format, bit depth, alpha mode.
+- Sheet nodes (`sheet_output`, `random_flipbook`, `pattern_grid`) are defined with `assemble` instead of a shader: the node returns a plan (columns, padding, dilation, and for each cell which input to draw at which frame and seed offset) and the engine evaluates those inputs and draws them into one texture (`src/engine/sheet.ts`). A sheet is `cols × (width + 2·padding)` wide; an `output` after it passes it through at that size. Preview's sheet view and `Engine.evaluateSheet` use the same code for any node.
 - `Sheet Output` assembles frames with padding and edge dilation, then writes the sheet and a sidecar:
 
 ```json

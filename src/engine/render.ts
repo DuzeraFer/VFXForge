@@ -16,6 +16,11 @@ export type Target = { nodeId: string; output: string }
  * Accepts "nodeId.output", "nodeId" (its first output), the name of an Output
  * node, or nothing (the graph's first Output node).
  */
+/** Node types that mark a result of the graph. */
+export function isResultNode(type: string): boolean {
+  return type === "output" || type === "sheet_output"
+}
+
 export function resolveTarget(graph: Graph, registry: NodeRegistry, target?: string): Target {
   const firstOutput = (nodeId: string): Target => {
     const node = graph.nodes.find((n) => n.id === nodeId)!
@@ -23,7 +28,7 @@ export function resolveTarget(graph: Graph, registry: NodeRegistry, target?: str
     if (!def) throw new EvalError(nodeId, `Unknown node type "${node.type}".`)
     return { nodeId, output: Object.keys(def.outputs)[0] }
   }
-  const outputs = graph.nodes.filter((n) => n.type === "output")
+  const outputs = graph.nodes.filter((n) => isResultNode(n.type))
   if (!target) {
     if (outputs.length === 0) throw new Error(`Graph "${graph.id}" has no Output node. Name a node to render.`)
     return firstOutput(outputs[0].id)
@@ -34,7 +39,7 @@ export function resolveTarget(graph: Graph, registry: NodeRegistry, target?: str
     if (graph.nodes.some((n) => n.id === nodeId)) return { nodeId, output: target.slice(dot + 1) }
   }
   if (graph.nodes.some((n) => n.id === target)) return firstOutput(target)
-  const named = outputs.find((n) => (n.params.name ?? "output") === target)
+  const named = outputs.find((n) => (n.params.name ?? (n.type === "output" ? "output" : "sheet")) === target)
   if (named) return firstOutput(named.id)
   throw new Error(`Graph "${graph.id}" has no node or output called "${target}".`)
 }

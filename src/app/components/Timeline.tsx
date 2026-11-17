@@ -8,7 +8,7 @@ type Props = { open: boolean; onToggle: () => void; settings: GraphSettings | nu
 const pad = (n: number): string => String(n).padStart(2, "0")
 
 export function Timeline({ open, onToggle, settings }: Props): ReactElement {
-  const { playing, frame } = usePlayback()
+  const { playing, frame, onion } = usePlayback()
   const cellsRef = useRef<HTMLDivElement>(null)
   const frames = settings?.frames ?? 1
   const animated = frames > 1
@@ -63,6 +63,16 @@ export function Timeline({ open, onToggle, settings }: Props): ReactElement {
             })}
           </div>
           <span className="timeline-readout">{settings?.fps ?? 12} fps</span>
+          <button
+            className="text-button"
+            data-on={onion || undefined}
+            disabled={!animated}
+            title="Onion skin: also show the frame before (warm) and after (cool) in Preview"
+            onClick={() => playback.setOnion(!onion)}
+            data-testid="onion-toggle"
+          >
+            Onion
+          </button>
           <span className="timeline-readout">
             Loop <span className={settings?.loop === false ? undefined : "timeline-ok"}>{settings?.loop === false ? "○" : "✓"}</span>
           </span>

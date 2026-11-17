@@ -27,6 +27,12 @@ time -> two perlin noises (evolution driven by time.phase, so they loop) -> flam
 
 Set warp and erosion "tiling" to "clamp" so the flame does not wrap around the frame. Animated graphs need frames > 1 in the graph settings (set_graph).
 
+## Animation and sprite sheets
+
+An animated graph has frames > 1 (set_graph). Everything that moves is driven by \`time\`: its \`phase\` runs 0 to 1 over the loop, and the noises' \`evolution\` is periodic, so frame N is exactly frame 0 and loops never pop. Drive with \`phase\`, \`sin\` or \`cos\`; \`frame\` and \`seconds\` do not wrap smoothly.
+
+End an animation with a \`sheet_output\` node instead of (or next to) \`output\`: it lays every frame out in one grid (cols 0 = squarest), with optional padding around each frame and color dilation under transparent pixels. Rendering it shows the whole sheet. \`random_flipbook\` makes a grid of seed variations of one image, and \`pattern_grid\` puts up to eight different images in one atlas. To judge motion, use \`render_frames\` on the node that feeds the sheet and \`measure\` with motion: true: loopSeamRatio near 1 means the step from the last frame to the first is like every other step.
+
 ## Generated pictures (AI Image node)
 
 For shapes that are hard to build from noise and primitives (a hand-drawn smoke puff, a slash, a rune, a splash), add an \`ai_image\` node. Set its \`prompt\` with apply: describe one subject, its style ("flat cel-shaded", "soft painterly"), and what stays empty. \`mode\` "transparent" asks for a transparent background; "mask" asks for a bright subject on black and uses brightness as alpha, which suits anything you will band and recolor. The node outputs \`out\` (color) and \`mask\` (gray): feed \`mask\` to band, erosion or palette_remap like any other shape.

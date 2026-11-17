@@ -1,0 +1,387 @@
+{
+ "version": 1,
+ "name": "sheet",
+ "seed": 5,
+ "graphs": [
+  {
+   "id": "g1",
+   "name": "sheet_output",
+   "settings": {
+    "width": 48,
+    "height": 48,
+    "frames": 4,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "t",
+     "type": "time",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "scale": 2
+     },
+     "driven": {
+      "evolution": "t.phase"
+     }
+    },
+    {
+     "id": "b",
+     "type": "band",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "thresholds": [
+       0.5,
+       0.62
+      ]
+     }
+    },
+    {
+     "id": "p",
+     "type": "palette_remap",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0,
+         0,
+         0,
+         0
+        ]
+       },
+       {
+        "position": 0.5,
+        "color": [
+         0.9,
+         0.3,
+         0.1,
+         1
+        ]
+       },
+       {
+        "position": 1,
+        "color": [
+         1,
+         0.9,
+         0.5,
+         1
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "s",
+     "type": "sheet_output",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "name": "padded",
+      "padding": 3,
+      "dilate": 3
+     }
+    },
+    {
+     "id": "s2",
+     "type": "sheet_output",
+     "position": [
+      800,
+      160
+     ],
+     "params": {
+      "name": "plain",
+      "cols": 4,
+      "dilate": 0
+     }
+    },
+    {
+     "id": "s3",
+     "type": "sheet_output",
+     "position": [
+      800,
+      320
+     ],
+     "params": {
+      "name": "gray",
+      "cols": 2,
+      "padding": 2
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "n.out",
+     "to": "b.in"
+    },
+    {
+     "from": "b.out",
+     "to": "p.in"
+    },
+    {
+     "from": "p.out",
+     "to": "s.in"
+    },
+    {
+     "from": "p.out",
+     "to": "s2.in"
+    },
+    {
+     "from": "b.out",
+     "to": "s3.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g2",
+   "name": "random_flipbook",
+   "settings": {
+    "width": 48,
+    "height": 48,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "t",
+     "type": "time",
+     "position": [
+      0,
+      0
+     ]
+    },
+    {
+     "id": "n",
+     "type": "perlin",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "scale": 2
+     },
+     "driven": {
+      "evolution": "t.phase"
+     }
+    },
+    {
+     "id": "b",
+     "type": "band",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "thresholds": [
+       0.5,
+       0.62
+      ]
+     }
+    },
+    {
+     "id": "p",
+     "type": "palette_remap",
+     "position": [
+      600,
+      0
+     ],
+     "params": {
+      "gradient": [
+       {
+        "position": 0,
+        "color": [
+         0,
+         0,
+         0,
+         0
+        ]
+       },
+       {
+        "position": 0.5,
+        "color": [
+         0.9,
+         0.3,
+         0.1,
+         1
+        ]
+       },
+       {
+        "position": 1,
+        "color": [
+         1,
+         0.9,
+         0.5,
+         1
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "f",
+     "type": "random_flipbook",
+     "position": [
+      800,
+      0
+     ],
+     "params": {
+      "count": 6,
+      "cols": 3,
+      "padding": 1
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      1000,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "n.out",
+     "to": "b.in"
+    },
+    {
+     "from": "b.out",
+     "to": "p.in"
+    },
+    {
+     "from": "p.out",
+     "to": "f.in"
+    },
+    {
+     "from": "f.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  },
+  {
+   "id": "g3",
+   "name": "pattern_grid",
+   "settings": {
+    "width": 48,
+    "height": 48,
+    "frames": 1,
+    "fps": 12,
+    "loop": true,
+    "bitDepth": "16f"
+   },
+   "nodes": [
+    {
+     "id": "a",
+     "type": "uniform_color",
+     "position": [
+      0,
+      0
+     ],
+     "params": {
+      "color": [
+       0.2,
+       0.6,
+       0.9,
+       0.5
+      ]
+     }
+    },
+    {
+     "id": "b",
+     "type": "gradient",
+     "position": [
+      0,
+      160
+     ],
+     "params": {
+      "kind": "radial"
+     }
+    },
+    {
+     "id": "c",
+     "type": "polygon",
+     "position": [
+      0,
+      320
+     ]
+    },
+    {
+     "id": "g",
+     "type": "pattern_grid",
+     "position": [
+      200,
+      0
+     ],
+     "params": {
+      "padding": 2
+     }
+    },
+    {
+     "id": "o",
+     "type": "output",
+     "position": [
+      400,
+      0
+     ],
+     "params": {
+      "name": "output"
+     }
+    }
+   ],
+   "links": [
+    {
+     "from": "a.out",
+     "to": "g.in1"
+    },
+    {
+     "from": "b.out",
+     "to": "g.in3"
+    },
+    {
+     "from": "c.out",
+     "to": "g.in6"
+    },
+    {
+     "from": "g.out",
+     "to": "o.in"
+    }
+   ],
+   "frames": [],
+   "exposed": []
+  }
+ ],
+ "functions": [],
+ "gradients": [],
+ "references": [],
+ "comments": []
+}

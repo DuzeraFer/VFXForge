@@ -6,7 +6,10 @@ import { session } from "../app/session"
 import type { Graph } from "../doc/types"
 import type { Engine } from "../engine/evaluator"
 import type { GpuContext } from "../engine/gpu"
-import type { Target } from "../engine/render"
+import { toRgba8 } from "../engine/evaluator"
+import { measureMotion } from "../engine/measure"
+import { isResultNode, type Target } from "../engine/render"
+import { parseSocketRef } from "../doc/types"
 import type { ResolvedGraph } from "../engine/validate"
 import { registry } from "../nodes"
 import { CHANNELS, createPresenter, type Channel } from "./present"
@@ -55,7 +58,7 @@ export function pickTarget(graph: Graph, resolved: ResolvedGraph, mode: Mode, pi
     }
   }
   for (const node of graph.nodes) {
-    if (node.type !== "output") continue
+    if (!isResultNode(node.type)) continue
     const target = imageTarget(graph, resolved, node.id)
     if (target) return target
   }
@@ -71,7 +74,14 @@ export function pickTarget(graph: Graph, resolved: ResolvedGraph, mode: Mode, pi
 export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selection, pinnedNodeId }: Props): ReactElement {
   const stageRef = useRef<HTMLDivElement>(null)
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null)
-  const { frame } = usePlayback()
+  const { frame, onion } = usePlayback()
+  /** Whole sheet instead of one frame. */
+  const [sheet, setSheet] = useState(false)
+  /** Difference between the last frame and the first. */
+  const [seam, setSeam] = useState(false)
+  const [seamNote, setSeamNote] = useState("")
+  /** Size of what is on screen; a sheet is larger than the graph. */
+  const [shown, setShown] = useState<{ width: number; height: number } | null>(null)
   const [box, setBox] = useState({ width: 0, height: 0 })
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<Mode>("node")
@@ -86,8 +96,16 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
     [graph, resolved, mode, pinnedNodeId, selection]
   )
   const targetNode = target && graph ? graph.nodes.find((n) => n.id === target.nodeId) : undefined
-  const imageWidth = graph?.settings.width ?? 1
-  const imageHeight = graph?.settings.height ?? 1
+  const imageWidth = shown?.width ?? graph?.settings.width ?? 1
+  const imageHeight = shown?.height ?? graph?.settings.height ?? 1
+  const frames = graph?.settings.frames ?? 1
+  // One frame of a Sheet Output is the frame of what feeds it.
+  const frameTarget = useMemo((): Target | null => {
+    if (!target || !graph || targetNode?.type !== "sheet_output") return target
+    const link = graph.links.find((l) => l.to === `${target.nodeId}.in`)
+    const from = link && parseSocketRef(link.from)
+    return from ? { nodeId: from.nodeId, output: from.socket } : target
+  }, [target, graph, targetNode?.type])
   const repeats = tile ? 2 : 1
 
   useEffect(() => {
@@ -140,7 +158,30 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
     }
     try {
       engine.setGraph(graph, projectSeed)
-      presenter.present(engine.evaluate(target.nodeId, target.output, frame), { channel, tile: repeats })
+      const at = frameTarget ?? target
+      const image = (f: number): ReturnType<Engine["evaluate"]> => engine.evaluate(at.nodeId, at.output, f)
+      let main: ReturnType<Engine["evaluate"]>
+      if (seam && frames > 1) {
+        main = image(frames - 1)
+        presenter.present(main, { tile: repeats, difference: image(0) })
+      } else if (sheet) {
+        main = targetNode?.type === "sheet_output" ? engine.evaluate(target.nodeId, target.output, frame) : engine.evaluateSheet(target.nodeId, target.output)
+        presenter.present(main, { channel, tile: repeats })
+      } else if (onion && frames > 1) {
+        main = image(frame)
+        presenter.presentLayers(
+          [
+            { image: image(frame - 1), opacity: 0.35, tint: [1, 0.45, 0.2] },
+            { image: image(frame + 1), opacity: 0.35, tint: [0.3, 0.6, 1] },
+            { image: main }
+          ],
+          { channel, tile: repeats }
+        )
+      } else {
+        main = image(frame)
+        presenter.present(main, { channel, tile: repeats })
+      }
+      if (main.width !== shown?.width || main.height !== shown?.height) setShown({ width: main.width, height: main.height })
       // Shader compile errors arrive late; show them when they do.
       void engine.settle().then(
         () => !stale && setError(null),
@@ -153,7 +194,34 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
     return () => {
       stale = true
     }
-  }, [engine, presenter, graph, projectSeed, target, frame, channel, repeats, width, height, assetRevision])
+  }, [engine, presenter, graph, projectSeed, target, frameTarget, targetNode?.type, frame, frames, channel, repeats, width, height, assetRevision, sheet, seam, onion, shown])
+
+  // Seam check in numbers: how big the step from the last frame to the first is, next to the other steps.
+  useEffect(() => {
+    setSeamNote("")
+    const at = frameTarget ?? target
+    if (!seam || !engine || !graph || !at || frames < 2) return
+    let stale = false
+    void (async () => {
+      try {
+        const images = []
+        for (let f = 0; f < frames; f++) {
+          engine.setGraph(graph, projectSeed)
+          const result = engine.evaluate(at.nodeId, at.output, f)
+          images.push({ width: result.width, height: result.height, data: toRgba8(await engine.readPixels(result)) })
+          if (stale) return
+        }
+        const motion = measureMotion(images)
+        const ratio = Number.isFinite(motion.loopSeamRatio) ? `${motion.loopSeamRatio}×` : "far above"
+        setSeamNote(motion.frameToFrame.mean === 0 ? "nothing moves" : `seam step ${ratio} the average step`)
+      } catch {
+        setSeamNote("")
+      }
+    })()
+    return () => {
+      stale = true
+    }
+  }, [seam, engine, graph, projectSeed, frameTarget, target, frames, assetRevision])
 
   const zoomBy = (factor: number): void => {
     const next = Math.min(32, Math.max(0.05, scale * factor))
@@ -213,6 +281,9 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
         </div>
         {!target && !error && <div className="preview-empty">{graph?.nodes.length ? "Select a node with an image output." : "Nothing to show yet."}</div>}
         {error && <div className="preview-error">{error}</div>}
+        <span className="preview-status" data-testid="preview-status">
+          {seam && animated ? seamNote || "checking…" : sheet ? `${frames} frames` : animated ? `frame ${String(frame + 1).padStart(2, "0")}` : "still"}
+        </span>
       </div>
 
       <div className="preview-toolbar">
@@ -252,10 +323,31 @@ export function PreviewPane({ gpu, engine, graph, resolved, projectSeed, selecti
           </select>
           <Icon name="chevron" size={10} />
         </label>
-        <span className="toolbar-spacer" />
-        <span className="preview-frame">
-          {animated ? `frame ${String(frame + 1).padStart(2, "0")}` : "still"}
-        </span>
+        {(animated || targetNode?.type === "sheet_output") && (
+          <button
+            className="text-button"
+            data-on={(sheet && !seam) || undefined}
+            onClick={() => {
+              setSheet((v) => !v || seam)
+              setSeam(false)
+            }}
+            title="Show every frame in one grid"
+            data-testid="sheet-toggle"
+          >
+            Sheet
+          </button>
+        )}
+        {animated && (
+          <button
+            className="text-button"
+            data-on={seam || undefined}
+            onClick={() => setSeam((v) => !v)}
+            title="Seam check: where the last frame differs from the first, and how that step compares with the others"
+            data-testid="seam-toggle"
+          >
+            Seam
+          </button>
+        )}
       </div>
     </section>
   )

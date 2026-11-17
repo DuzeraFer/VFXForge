@@ -11,7 +11,8 @@
 
 import { parseSocketRef, type Graph, type Node, type ParamValue } from "../doc/types"
 import type { GpuContext } from "./gpu"
-import type { DataType, EvalContext, NodeRegistry, ResolvedNodeDef } from "./nodeDef"
+import type { DataType, EvalContext, NodeRegistry, ResolvedNodeDef, SheetPlan } from "./nodeDef"
+import { createSheetBlitter, sheetSize, type SheetBlitter } from "./sheet"
 import { buildLayout, buildShader, GLOBALS_SIZE, packGlobals, packParams, variantKey, type InputBinding, type UniformLayout } from "./shader"
 import { resolveGraph, type Problem, type ResolvedGraph } from "./validate"
 
@@ -63,6 +64,14 @@ function stable(value: unknown): string {
 /** An image file of the project, uploaded as it is displayed (8-bit, straight alpha). */
 type Asset = { texture: GPUTexture; width: number; height: number; version: number }
 
+type Memo = { keys: Map<string, string>; values: Map<string, number> }
+
+/** What one evaluation is for: a frame (wrapped into the loop) and a project seed. */
+type Ctx = { frame: number; seed: number; memo: Memo }
+
+/** Options of `evaluateSheet`: all frames of a target in a grid. */
+export type SheetOptions = { cols?: number; padding?: number; dilate?: number }
+
 type CacheEntry = { result: ImageResult; bytes: number; lastUsed: number }
 
 type CompiledNode = { def: ResolvedNodeDef; layout: UniformLayout }
@@ -99,10 +108,9 @@ export class Engine {
   private assetVersion = 0
   private readonly assetListeners = new Set<() => void>()
 
-  /** Memo for one `evaluate` / `keyOf` call tree: keys and values per frame. */
-  private memoFrame = -1
-  private keyMemo = new Map<string, string>()
-  private valueMemo = new Map<string, number>()
+  /** Keys and values already worked out for the current graph, per frame and seed. */
+  private readonly memos = new Map<string, Memo>()
+  private blitter: SheetBlitter | null = null
 
   stats: EngineStats = { renders: 0, cacheHits: 0, cachedTextures: 0, cachedBytes: 0 }
 
@@ -138,7 +146,7 @@ export class Engine {
       if (list) list.push(problem)
       else this.problemsByNode.set(problem.nodeId, [problem])
     }
-    this.resetMemo(-1)
+    this.memos.clear()
     return this.resolved
   }
 
@@ -160,7 +168,7 @@ export class Engine {
       device.queue.copyExternalImageToTexture({ source: image }, { texture, premultipliedAlpha: false }, [image.width, image.height])
       this.assets.set(ref, { texture, width: image.width, height: image.height, version: ++this.assetVersion })
     }
-    this.resetMemo(-1)
+    this.memos.clear()
     for (const listener of [...this.assetListeners]) listener()
   }
 
@@ -184,14 +192,18 @@ export class Engine {
     return this.resolved?.problems ?? []
   }
 
-  private resetMemo(frame: number): void {
-    this.memoFrame = frame
-    this.keyMemo = new Map()
-    this.valueMemo = new Map()
-  }
-
-  private useFrame(frame: number): void {
-    if (frame !== this.memoFrame) this.resetMemo(frame)
+  /** Frame N is frame 0: every frame number is wrapped into the loop here, once. */
+  private ctx(frame: number, seed = this.projectSeed): Ctx {
+    const frames = this.graph?.settings.frames ?? 1
+    const wrapped = ((Math.round(frame) % frames) + frames) % frames
+    const id = `${wrapped}|${seed}`
+    let memo = this.memos.get(id)
+    if (!memo) {
+      if (this.memos.size > 1024) this.memos.clear()
+      memo = { keys: new Map(), values: new Map() }
+      this.memos.set(id, memo)
+    }
+    return { frame: wrapped, seed, memo }
   }
 
   private need(nodeId: string): { node: Node; def: ResolvedNodeDef } {
@@ -209,14 +221,14 @@ export class Engine {
   }
 
   /** Parameters with defaults filled in and driven values applied, for one frame. */
-  private paramsOf(node: Node, def: ResolvedNodeDef, frame: number): Record<string, ParamValue> {
+  private paramsOf(node: Node, def: ResolvedNodeDef, ctx: Ctx): Record<string, ParamValue> {
     const values: Record<string, ParamValue> = {}
     for (const [name, schema] of Object.entries(def.params)) {
       values[name] = name in node.params ? node.params[name] : (schema.default as ParamValue)
     }
     for (const [param, ref] of Object.entries(node.driven)) {
       const from = parseSocketRef(ref)!
-      const value = this.valueOfFrame(from.nodeId, from.socket, frame)
+      const value = this.valueOfFrame(from.nodeId, from.socket, ctx)
       values[param] = def.params[param].type === "int" ? Math.round(value) : value
     }
     return values
@@ -224,13 +236,12 @@ export class Engine {
 
   /** Value of a value-type output at a frame. */
   valueOf(nodeId: string, output: string, frame: number): number {
-    this.useFrame(frame)
-    return this.valueOfFrame(nodeId, output, frame)
+    return this.valueOfFrame(nodeId, output, this.ctx(frame))
   }
 
-  private valueOfFrame(nodeId: string, output: string, frame: number): number {
+  private valueOfFrame(nodeId: string, output: string, ctx: Ctx): number {
     const memoKey = `${nodeId}.${output}`
-    const cached = this.valueMemo.get(memoKey)
+    const cached = ctx.memo.values.get(memoKey)
     if (cached !== undefined) return cached
     const { node, def } = this.need(nodeId)
     if (!def.evaluate) throw new EvalError(nodeId, `"${memoKey}" is an image, not a value.`)
@@ -239,18 +250,18 @@ export class Engine {
       const source = this.linkByTarget.get(`${nodeId}.${name}`)
       if (!source) continue
       const from = parseSocketRef(source)!
-      inputs[name] = this.valueOfFrame(from.nodeId, from.socket, frame)
+      inputs[name] = this.valueOfFrame(from.nodeId, from.socket, ctx)
     }
-    const outputs = def.evaluate({ params: this.paramsOf(node, def, frame), inputs, ...this.timeOf(frame) })
-    for (const [name, value] of Object.entries(outputs)) this.valueMemo.set(`${nodeId}.${name}`, value)
+    const outputs = def.evaluate({ params: this.paramsOf(node, def, ctx), inputs, ...this.timeOf(ctx.frame) })
+    for (const [name, value] of Object.entries(outputs)) ctx.memo.values.set(`${nodeId}.${name}`, value)
     const value = outputs[output]
     if (value === undefined) throw new EvalError(nodeId, `"${node.type}" has no output "${output}".`)
     return value
   }
 
-  /** A bypassed node passes its first connected image input through. */
+  /** A bypassed (or pass-through) node hands on its first connected image input. */
   private bypassSource(node: Node, def: ResolvedNodeDef): string | null {
-    if (!node.bypass) return null
+    if (!node.bypass && !def.passthrough) return null
     for (const name of Object.keys(def.inputs)) {
       const source = this.linkByTarget.get(`${node.id}.${name}`)
       if (source) return source
@@ -260,62 +271,138 @@ export class Engine {
 
   /** Content key of an image output at a frame. No GPU work. Equal keys mean equal pixels. */
   keyOf(nodeId: string, output: string, frame: number): string {
-    this.useFrame(frame)
-    return this.keyOfFrame(nodeId, output, frame)
+    return this.keyOfFrame(nodeId, output, this.ctx(frame))
   }
 
-  private keyOfFrame(nodeId: string, output: string, frame: number): string {
+  /** The cells an assemble node asks for, with the source each one draws (null: nothing is connected there). */
+  private planOf(node: Node, def: ResolvedNodeDef, ctx: Ctx): { plan: SheetPlan; sources: ({ nodeId: string; output: string; ctx: Ctx } | null)[] } {
+    const connected = Object.keys(def.inputs).filter((name) => this.linkByTarget.has(`${node.id}.${name}`))
+    const plan = def.assemble!({ params: this.paramsOf(node, def, ctx), connected, frame: ctx.frame, frames: this.graph!.settings.frames })
+    const sources = plan.cells.map((cell) => {
+      const source = this.linkByTarget.get(`${node.id}.${cell.input}`)
+      if (!source) return null
+      const from = parseSocketRef(source)!
+      return { nodeId: from.nodeId, output: from.socket, ctx: this.ctx(cell.frame, ctx.seed + cell.seed) }
+    })
+    return { plan, sources }
+  }
+
+  private keyOfFrame(nodeId: string, output: string, ctx: Ctx): string {
     const memoKey = `${nodeId}.${output}`
-    const cached = this.keyMemo.get(memoKey)
+    const cached = ctx.memo.keys.get(memoKey)
     if (cached) return cached
     const { node, def } = this.need(nodeId)
-    if (!def.wgsl) throw new EvalError(nodeId, `"${memoKey}" is a value, not an image.`)
+    if (def.evaluate) throw new EvalError(nodeId, `"${memoKey}" is a value, not an image.`)
     if (!(output in def.outputs)) throw new EvalError(nodeId, `"${node.type}" has no output "${output}".`)
 
     let key: string
     const bypass = this.bypassSource(node, def)
     if (bypass) {
       const from = parseSocketRef(bypass)!
-      key = this.keyOfFrame(from.nodeId, from.socket, frame)
+      key = this.keyOfFrame(from.nodeId, from.socket, ctx)
+    } else if (def.assemble) {
+      const { plan, sources } = this.planOf(node, def, ctx)
+      const { width, height } = this.graph!.settings
+      key = hashString(
+        stable({
+          sheet: def.type,
+          as: this.resolved!.outputTypes.get(memoKey),
+          size: [width, height],
+          layout: [plan.cols, plan.padding, plan.dilate],
+          cells: sources.map((source) => (source ? this.keyOfFrame(source.nodeId, source.output, source.ctx) : null))
+        })
+      )
     } else {
       const inputKeys: Record<string, string> = {}
       for (const name of Object.keys(def.inputs)) {
         const source = this.linkByTarget.get(`${nodeId}.${name}`)
         if (!source) continue
         const from = parseSocketRef(source)!
-        inputKeys[name] = this.keyOfFrame(from.nodeId, from.socket, frame)
+        inputKeys[name] = this.keyOfFrame(from.nodeId, from.socket, ctx)
       }
       const { width, height } = this.graph!.settings
-      const time = this.timeOf(frame)
+      const time = this.timeOf(ctx.frame)
       key = hashString(
         stable({
           type: def.type,
           output,
           as: this.resolved!.outputTypes.get(memoKey),
-          params: this.paramsOf(node, def, frame),
+          params: this.paramsOf(node, def, ctx),
           inputs: inputKeys,
           size: [width, height],
-          seed: def.seeded ? this.projectSeed : 0,
+          seed: def.seeded ? ctx.seed : 0,
           time: def.usesTime ? [time.frame % time.frames, time.frames, time.fps] : null,
           asset: this.assetOf(node, def)?.version ?? 0
         })
       )
     }
-    this.keyMemo.set(memoKey, key)
+    ctx.memo.keys.set(memoKey, key)
     return key
   }
 
   /** Renders (or fetches from cache) an image output at a frame. */
   evaluate(nodeId: string, output: string, frame: number): ImageResult {
-    this.useFrame(frame)
     this.clock++
-    const result = this.evaluateFrame(nodeId, output, frame)
+    const result = this.evaluateFrame(nodeId, output, this.ctx(frame))
     this.evict()
     return result
   }
 
-  private evaluateFrame(nodeId: string, output: string, frame: number): ImageResult {
-    const key = this.keyOfFrame(nodeId, output, frame)
+  /**
+   * Every frame of an image output in one grid, for Preview's sheet view and
+   * for agents. The same drawing code as the Sheet Output node.
+   */
+  evaluateSheet(nodeId: string, output: string, options: SheetOptions = {}): ImageResult {
+    this.clock++
+    const frames = this.graph?.settings.frames ?? 1
+    const plan: SheetPlan = {
+      cols: Math.max(1, Math.min(frames, options.cols || Math.ceil(Math.sqrt(frames)))),
+      padding: options.padding ?? 0,
+      dilate: options.dilate ?? 0,
+      cells: Array.from({ length: frames }, (_, frame) => ({ input: "in", frame, seed: 0 }))
+    }
+    const sources = plan.cells.map((cell) => ({ nodeId, output, ctx: this.ctx(cell.frame) }))
+    const type = this.resolved?.outputTypes.get(`${nodeId}.${output}`)
+    if (type !== "gray" && type !== "color") throw new EvalError(nodeId, `"${nodeId}.${output}" is not an image.`)
+    const { width, height } = this.graph!.settings
+    const key = hashString(stable({ sheetOf: sources.map((s) => this.keyOfFrame(s.nodeId, s.output, s.ctx)), size: [width, height], layout: [plan.cols, plan.padding, plan.dilate] }))
+    const result = this.assemble(key, type, plan, sources, nodeId)
+    this.evict()
+    return result
+  }
+
+  private assemble(key: string, type: "gray" | "color", plan: SheetPlan, sources: ({ nodeId: string; output: string; ctx: Ctx } | null)[], nodeId: string): ImageResult {
+    const hit = this.cache.get(key)
+    if (hit) {
+      hit.lastUsed = this.clock
+      this.stats.cacheHits++
+      return hit.result
+    }
+    const cell = this.graph!.settings
+    const size = sheetSize(plan, cell.width, cell.height)
+    const limit = this.gpu.device.limits.maxTextureDimension2D
+    if (size.width > limit || size.height > limit) {
+      throw new EvalError(nodeId, `The sheet would be ${size.width}×${size.height} pixels, more than this GPU's ${limit}. Use fewer frames, more columns, or a smaller graph size.`)
+    }
+    const cells = sources.map((source) => (source ? this.evaluateFrame(source.nodeId, source.output, source.ctx) : null))
+    const texture = this.gpu.device.createTexture({
+      label: `sheet:${nodeId}`,
+      size: [size.width, size.height],
+      format: FORMAT[type],
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC
+    })
+    this.blitter ??= createSheetBlitter(this.gpu)
+    this.blitter.draw(texture, type, plan, cell.width, cell.height, cells)
+    const result: ImageResult = { texture, type, width: size.width, height: size.height, key }
+    const bytes = size.width * size.height * BYTES_PER_PIXEL[type]
+    this.cache.set(key, { result, bytes, lastUsed: this.clock })
+    this.cachedBytes += bytes
+    this.stats.renders++
+    return result
+  }
+
+  private evaluateFrame(nodeId: string, output: string, ctx: Ctx): ImageResult {
+    const key = this.keyOfFrame(nodeId, output, ctx)
     const hit = this.cache.get(key)
     if (hit) {
       hit.lastUsed = this.clock
@@ -327,7 +414,12 @@ export class Engine {
     const bypass = this.bypassSource(node, def)
     if (bypass) {
       const from = parseSocketRef(bypass)!
-      return this.evaluateFrame(from.nodeId, from.socket, frame)
+      return this.evaluateFrame(from.nodeId, from.socket, ctx)
+    }
+
+    if (def.assemble) {
+      const { plan, sources } = this.planOf(node, def, ctx)
+      return this.assemble(key, this.resolved!.outputTypes.get(`${nodeId}.${output}`) as "gray" | "color", plan, sources, nodeId)
     }
 
     const inputs: Record<string, ImageResult> = {}
@@ -339,7 +431,7 @@ export class Engine {
         continue
       }
       const from = parseSocketRef(source)!
-      inputs[name] = this.evaluateFrame(from.nodeId, from.socket, frame)
+      inputs[name] = this.evaluateFrame(from.nodeId, from.socket, ctx)
       bound[name] = inputs[name].type
     }
 
@@ -357,8 +449,8 @@ export class Engine {
       format: FORMAT[type],
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC
     })
-    const params = this.paramsOf(node, def, frame)
-    this.render(def, Object.keys(def.outputs).indexOf(output), type, bound, inputs, params, frame, texture, node)
+    const params = this.paramsOf(node, def, ctx)
+    this.render(def, Object.keys(def.outputs).indexOf(output), type, bound, inputs, params, ctx, texture, node)
 
     const result: ImageResult = { texture, type, width, height, key }
     const bytes = width * height * BYTES_PER_PIXEL[type]
@@ -431,7 +523,7 @@ export class Engine {
     bound: InputBinding,
     inputs: Record<string, ImageResult>,
     params: Record<string, ParamValue>,
-    frame: number,
+    ctx: Ctx,
     target: GPUTexture,
     node: Node
   ): void {
@@ -439,7 +531,7 @@ export class Engine {
     const { layout } = this.compile(def)
     const { pipeline, textures } = this.pipelineFor(def, layout, bound, outputIndex, type)
     const { width, height } = this.graph!.settings
-    const time = this.timeOf(frame)
+    const time = this.timeOf(ctx.frame)
 
     const uniform = (data: ArrayBuffer, size: number): GPUBuffer => {
       const buffer = device.createBuffer({ size, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
@@ -454,7 +546,7 @@ export class Engine {
         phase: time.phase,
         frame: time.frame,
         frames: time.frames,
-        seed: (this.projectSeed + seedOffset) | 0,
+        seed: (ctx.seed + seedOffset) | 0,
         seconds: time.frame / time.fps
       }),
       GLOBALS_SIZE

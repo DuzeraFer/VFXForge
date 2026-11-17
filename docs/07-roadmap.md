@@ -69,6 +69,8 @@ Status: built and checked end to end against a stand-in for OpenAI on the test m
 4. Sheet view and animated playback in Preview; onion skin; seam check.
 5. Image Sequence input.
 
+Status: 1 to 4 are built. Loops are exact by construction (every frame number is wrapped into the loop, and noise evolution is periodic). Still open: Image Sequence input (5), and Pattern Grid taking one animated input instead of separate images. Writing the sheet and its sidecar to disk from the app is Phase 5; until then `vfxforge render` and the agent's `render` tool produce the PNG.
+
 **Accept**: a 16-frame looping cel-fire sheet exports with zero seam error and plays correctly in Preview.
 
 ## Phase 5 — Export and Unity link

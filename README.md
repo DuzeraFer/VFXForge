@@ -6,7 +6,9 @@ The full spec lives in [`docs/`](docs/README.md). Build order and acceptance che
 
 ## Status
 
-**Phase 3b — AI Image node.** A new source node draws a picture from a prompt with OpenAI's Images API on your own key, and feeds the graph like any other texture. Before it: Claude builds and edits graphs in the running app through MCP while you watch (Phase 3), in the dark "Bench" editor (Phase 2). Next: animation and sprite sheets.
+**Phase 4 — Animation and sprite sheets.** A **Sheet Output** node turns a looping animation into a sprite sheet (grid, padding, color dilation under transparent pixels), **Random Flipbook** makes a grid of seed variations and **Pattern Grid** an atlas of different images. Preview can show the whole sheet, onion skins and a seam check for the loop. Before it: the AI Image node (Phase 3b), Claude editing the live graph through MCP (Phase 3) and the dark "Bench" editor (Phase 2). Next: export and the Unity link.
+
+![The cel fire as a 16 frame sheet](docs/progress/phase-4-cel-fire-sheet.png)
 
 ## AI images
 
