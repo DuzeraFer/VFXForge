@@ -18,6 +18,14 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Golden-image tests (software WebGPU)
+        run: npm run test:golden
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: golden-failed
+          path: tests/golden/failed
+          if-no-files-found: ignore
 
   windows-portable:
     runs-on: windows-latest

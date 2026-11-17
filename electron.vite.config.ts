@@ -21,7 +21,13 @@ export default defineConfig({
     root: resolve(__dirname, "src"),
     build: {
       outDir: resolve(__dirname, "out/renderer"),
-      rollupOptions: { input: resolve(__dirname, "src/index.html") }
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, "src/index.html"),
+          // Engine without UI, for the CLI and golden tests (docs/06 §6.2).
+          headless: resolve(__dirname, "src/headless/index.html")
+        }
+      }
     },
     plugins: [react()]
   }
